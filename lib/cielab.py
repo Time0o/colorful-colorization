@@ -1,3 +1,4 @@
+from functools import partial
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -106,6 +107,39 @@ class CIELAB:
     def _get_q_to_ab(cls, ab, ab_gamut_mask):
         return ab[ab_gamut_mask] + cls.AB_BINSIZE / 2
 
+    @classmethod
+    def _plot_ab_matrix(cls, mat, ax=None, title=None):
+        if ax is None:
+            _, ax = plt.subplots()
+
+        imshow = partial(ax.imshow,
+                         np.flip(mat, axis=0),
+                         extent=[*cls.AB_RANGE[:2]] * 2)
+
+        if len(mat.shape) < 3 or mat.shape[2] == 1:
+            im = imshow(cmap='jet')
+
+            fig = plt.gcf()
+            fig.colorbar(im, cax=fig.add_axes())
+        else:
+            imshow()
+
+        # set title
+        if title is not None:
+            ax.set_title(title)
+
+        # set axes labels
+        ax.set_xlabel("$b$")
+        ax.set_ylabel("$a$")
+
+        # set ticks
+        ax.set_xticks(np.linspace(*cls.AB_RANGE[:2], 5))
+        ax.set_yticks(np.linspace(*cls.AB_RANGE[:2], 5))
+        ax.invert_yaxis()
+
+        # set grid
+        ax.grid(color='k', linestyle=':', dashes=(1, 4))
+
     @staticmethod
     def rgb_to_lab(img):
         return color.rgb2lab(img)
@@ -145,21 +179,30 @@ class CIELAB:
         color_space_rgb[~self._ab_gamut_mask, :] = 1
 
         # display color space
-        if ax is None:
-            _, ax = plt.subplots()
+        self._plot_ab_matrix(
+            color_space_rgb, ax, r"$RGB(a, b \mid L = {})$".format(l))
 
-        ax.imshow(np.flip(color_space_rgb, axis=0),
-                  extent=[*self.AB_RANGE[:2]] * 2)
+    def plot_empirical_distribution(self, dataset, ax=None, verbose=False):
+        # accumulate ab values
+        ab_acc = np.zeros([self.AB_RANGE[1] - self.AB_RANGE[0]] * 2)
 
-        # set axis labels and title
-        ax.set_xlabel("$b$")
-        ax.set_ylabel("$a$")
+        for i, img in enumerate(dataset):
+            if verbose:
+                fmt = "\rprocessing image {}/{}"
 
-        ax.set_title(r"$RGB(a, b \mid L = {})$".format(l))
+                print(fmt.format(i + 1, len(dataset)),
+                      end=('\n' if i == len(dataset) - 1 else ''),
+                      flush=True)
 
-        # customize ticks and grid
-        ax.set_xticks(np.linspace(*self.AB_RANGE[:2], 5))
-        ax.set_yticks(np.linspace(*self.AB_RANGE[:2], 5))
-        ax.invert_yaxis()
+            ab_rounded = np.round(img[:, :, 1:].reshape(-1, 2)).astype(int)
+            ab_offset = ab_rounded - self.AB_RANGE[0]
 
-        ax.grid(color='k', linestyle=':', dashes=(1, 4))
+            np.add.at(ab_acc, np.split(ab_offset, 2, axis=1), 1)
+
+        # convert to log scale
+        ab_acc[ab_acc == 0] = np.nan
+
+        ab_acc_log = np.log10(ab_acc) - np.log10(len(dataset))
+
+        # display distribution
+        self._plot_ab_matrix(ab_acc_log, ax, r"$log(P(a, b))$")
