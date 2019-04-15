@@ -24,7 +24,7 @@ class ABGamut:
         assert points.shape[0] == cls.EXPECTED_SIZE
         assert points.shape[1] == 2
 
-        return cls(points=np.flip(points, axis=1))
+        return cls(points=points)
 
 
 class CIELAB:
@@ -36,18 +36,27 @@ class CIELAB:
     RGB_RANGE = [0, 1, RGB_RESOLUTION]
     RGB_DTYPE = np.float64
 
+    Q_DTYPE = np.int64
+
     def __init__(self, gamut=ABGamut.auto()):
         self._a, self._b, self._ab = self._get_ab()
 
         self._ab_gamut_mask = self._get_ab_gamut_mask(
             self._a, self._b, self._ab, gamut)
 
+        self._ab_to_q = self._get_ab_to_q(self._ab_gamut_mask)
+
+        self._q_to_ab = self._get_q_to_ab(self._ab, self._ab_gamut_mask)
+
     @classmethod
     def _get_ab(cls):
         a = np.arange(*cls.AB_RANGE, dtype=cls.AB_DTYPE)
         b = np.arange(*cls.AB_RANGE, dtype=cls.AB_DTYPE)
 
-        return a, b, np.dstack(np.meshgrid(a, b))
+        b_, a_ = np.meshgrid(a, b)
+        ab = np.dstack((a_, b_))
+
+        return a, b, ab
 
     @classmethod
     def _get_ab_gamut_mask(cls, a, b, ab, gamut):
@@ -85,6 +94,43 @@ class CIELAB:
 
         return ab_gamut_mask
 
+    @classmethod
+    def _get_ab_to_q(cls, ab_gamut_mask):
+        ab_to_q = np.full(ab_gamut_mask.shape, -1, dtype=cls.Q_DTYPE)
+
+        ab_to_q[ab_gamut_mask] = np.arange(np.count_nonzero(ab_gamut_mask))
+
+        return ab_to_q
+
+    @classmethod
+    def _get_q_to_ab(cls, ab, ab_gamut_mask):
+        return ab[ab_gamut_mask] + cls.AB_BINSIZE / 2
+
+    @staticmethod
+    def rgb_to_lab(img):
+        return color.rgb2lab(img)
+
+    @staticmethod
+    def lab_to_rgb(img):
+        return color.lab2rgb(img)
+
+    def dissemble(self, img):
+        l, a, b = img[:, :, 0], img[:, :, 1], img[:, :, 2]
+
+        a = np.digitize(a, self._a) - 1
+        b = np.digitize(b, self._b) - 1
+
+        q = np.empty(img.shape[:2], dtype=self.Q_DTYPE)
+
+        for r in range(img.shape[0]):
+            for c in range(img.shape[1]):
+                q[r, c] = self._ab_to_q[a[r, c], b[r, c]]
+
+        return l, q
+
+    def reassemble(self, l, q):
+        return np.dstack((l, self._q_to_ab[q]))
+
     def plot_ab_gamut(self, l=50, ax=None):
         assert l >= 50 and l <= 100
 
@@ -99,12 +145,11 @@ class CIELAB:
         color_space_rgb[~self._ab_gamut_mask, :] = 1
 
         # display color space
-        color_space_rgb = np.flip(color_space_rgb.transpose(1, 0, 2), axis=0)
-
         if ax is None:
             _, ax = plt.subplots()
 
-        ax.imshow(color_space_rgb, extent=[*self.AB_RANGE[:2]] * 2)
+        ax.imshow(np.flip(color_space_rgb, axis=0),
+                  extent=[*self.AB_RANGE[:2]] * 2)
 
         # set axis labels and title
         ax.set_xlabel("$b$")
