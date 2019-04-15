@@ -1,4 +1,5 @@
 import os
+import pickle
 import re
 from glob import glob
 
@@ -32,6 +33,14 @@ class TinyImageNet(Dataset):
 
         self._build_indices()
         self._filter_non_rgb()
+
+    @staticmethod
+    def restore(path):
+        if not path.endswith('.pickle'):
+            path += '.pickle'
+
+        with open(path, 'rb') as f:
+            return pickle.load(f)
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -71,6 +80,13 @@ class TinyImageNet(Dataset):
             raise ValueError("invalid color space")
 
         self.color_space = color_space
+
+    def cache(self, path):
+        if not path.endswith('.pickle'):
+            path += '.pickle'
+
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
 
     def _build_indices(self):
         self._indices = {}
