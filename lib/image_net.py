@@ -32,22 +32,12 @@ class TinyImageNet(Dataset):
         self._build_indices()
 
     def __getitem__(self, index):
-        image_path = self._indices[self.dataset][index]
-        image_rgb = io.imread(image_path)
+        if isinstance(index, slice):
+            r = range(*index.indices(len(self._indices[self.dataset])))
 
-        if self.color_space == self.COLOR_SPACE_RGB:
-            if self.labeled:
-                raise ValueError("can not produce labeled data from RGB images")
-
-            return image_rgb
-
-        elif self.color_space == self.COLOR_SPACE_LAB:
-            image_lab = self.cielab.rgb_to_lab(image_rgb)
-
-            if self.labeled:
-                return self.cielab.dissemble(image_lab)
-            else:
-                return image_lab
+            return [self._getitem(i) for i in r]
+        else:
+            return self._getitem(index)
 
     def __len__(self):
         return len(self._indices[self.dataset])
@@ -100,6 +90,24 @@ class TinyImageNet(Dataset):
         else:
             images_root = os.path.join(dataset_path, 'images')
             self._indices[dataset] = self._listdir(images_root)
+
+    def _getitem(self, index):
+        image_path = self._indices[self.dataset][index]
+        image_rgb = io.imread(image_path)
+
+        if self.color_space == self.COLOR_SPACE_RGB:
+            if self.labeled:
+                raise ValueError("can not produce labeled data from RGB images")
+
+            return image_rgb
+
+        elif self.color_space == self.COLOR_SPACE_LAB:
+            image_lab = self.cielab.rgb_to_lab(image_rgb)
+
+            if self.labeled:
+                return self.cielab.dissemble(image_lab)
+            else:
+                return image_lab
 
     @staticmethod
     def _listdir(path):
