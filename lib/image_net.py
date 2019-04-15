@@ -31,6 +31,7 @@ class TinyImageNet(Dataset):
         self.set_color_space(color_space)
 
         self._build_indices()
+        self._filter_non_rgb()
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -91,6 +92,14 @@ class TinyImageNet(Dataset):
         else:
             images_root = os.path.join(dataset_path, 'images')
             self._indices[dataset] = self._listdir(images_root, sort_num=True)
+
+    def _filter_non_rgb(self):
+        for index in self._indices.values():
+            for i, path in enumerate(index):
+                img = io.imread(path)
+
+                if len(img.shape) != 3 or img.shape[2] != 3:
+                    del index[i]
 
     def _getitem(self, index):
         image_path = self._indices[self.dataset][index]
