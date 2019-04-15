@@ -1,4 +1,5 @@
 import os
+import re
 from glob import glob
 
 from skimage import io, color
@@ -85,11 +86,11 @@ class TinyImageNet(Dataset):
             for images in self._listdir(dataset_path):
                 images_root = os.path.join(images, 'images')
 
-                for image_path in self._listdir(images_root):
+                for image_path in self._listdir(images_root, sort_num=True):
                     self._indices[dataset].append(image_path)
         else:
             images_root = os.path.join(dataset_path, 'images')
-            self._indices[dataset] = self._listdir(images_root)
+            self._indices[dataset] = self._listdir(images_root, sort_num=True)
 
     def _getitem(self, index):
         image_path = self._indices[self.dataset][index]
@@ -110,5 +111,20 @@ class TinyImageNet(Dataset):
                 return image_lab
 
     @staticmethod
-    def _listdir(path):
-        return sorted(glob(os.path.join(path, '*')))
+    def _listdir(path, sort_num=False):
+        files = glob(os.path.join(path, '*'))
+
+        if sort_num:
+            def parse_num(f):
+                base = f.rsplit('.', 1)[0]
+
+                i = re.search(r'\d+$', base).start()
+                base, num = base[:i], base[i:]
+
+                return base, int(num)
+
+            files.sort(key=parse_num)
+        else:
+            files.sort()
+
+        return files
