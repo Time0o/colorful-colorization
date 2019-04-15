@@ -110,12 +110,16 @@ class TinyImageNet(Dataset):
             self._indices[dataset] = self._listdir(images_root, sort_num=True)
 
     def _filter_non_rgb(self):
-        for index in self._indices.values():
+        for dataset, index in self._indices.items():
+            index_rgb_only = []
+
             for i, path in enumerate(index):
                 img = io.imread(path)
 
-                if len(img.shape) != 3 or img.shape[2] != 3:
-                    del index[i]
+                if len(img.shape) == 3 and img.shape[2] == 3:
+                    index_rgb_only.append(path)
+
+            self._indices[dataset] = index_rgb_only
 
     def _getitem(self, index):
         image_path = self._indices[self.dataset][index]
