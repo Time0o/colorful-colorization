@@ -7,6 +7,26 @@ from shapely.geometry import Point, Polygon
 from skimage import color
 
 
+class ABGamut:
+    EXPECTED_SIZE = 313
+
+    def __init__(self, points=None):
+        self.points = points
+
+    @classmethod
+    def auto(cls):
+        return cls()
+
+    @classmethod
+    def from_file(cls, file):
+        points = np.load(file)
+
+        assert points.shape[0] == cls.EXPECTED_SIZE
+        assert points.shape[1] == 2
+
+        return cls(points=np.flip(points, axis=1))
+
+
 class CIELAB:
     AB_BINSIZE = 10
     AB_RANGE = [-110, 110, AB_BINSIZE]
@@ -16,51 +36,52 @@ class CIELAB:
     RGB_RANGE = [0, 1, RGB_RESOLUTION]
     RGB_DTYPE = np.float64
 
-    def __init__(self, illuminant='D65', observer='2'):
-        self.illuminant = illuminant
-        self.observer = observer
-
-        self._ab_grid = self._get_ab_grid()
+    def __init__(self, gamut=ABGamut.auto()):
+        self._a, self._b, self._ab = self._get_ab()
 
         self._ab_gamut_mask = self._get_ab_gamut_mask(
-            self._ab_grid, self.illuminant, self.observer)
-
-        # TODO: assert number of True mask entries
+            self._a, self._b, self._ab, gamut)
 
     @classmethod
-    def _get_ab_grid(cls):
+    def _get_ab(cls):
         a = np.arange(*cls.AB_RANGE, dtype=cls.AB_DTYPE)
         b = np.arange(*cls.AB_RANGE, dtype=cls.AB_DTYPE)
 
-        return np.dstack(np.meshgrid(a, b))
+        return a, b, np.dstack(np.meshgrid(a, b))
 
     @classmethod
-    def _get_ab_gamut_mask(cls, ab_grid, illuminant, observer):
-        # construct array of all points in discretized RGB space
-        rgb_range = np.linspace(*cls.RGB_RANGE, dtype=cls.RGB_DTYPE)
+    def _get_ab_gamut_mask(cls, a, b, ab, gamut):
+        ab_gamut_mask = np.full(ab.shape[:-1], False, dtype=bool)
 
-        _rgb_space = np.meshgrid(rgb_range, rgb_range, rgb_range)
-        rgb_space = np.stack(_rgb_space, -1).reshape(-1, 3)
+        if gamut.points is not None:
+            a = np.digitize(gamut.points[:, 0], a) - 1
+            b = np.digitize(gamut.points[:, 1], b) - 1
 
-        # convert points into Lab space
-        ab_gamut = np.squeeze(color.rgb2lab(
-            rgb_space[np.newaxis], illuminant, observer))[:, 1:]
+            for a_, b_ in zip(a, b):
+                ab_gamut_mask[a_, b_] = True
+        else:
+            # construct array of all points in discretized RGB space
+            rgb_range = np.linspace(*cls.RGB_RANGE, dtype=cls.RGB_DTYPE)
 
-        # find convex hull polygon of the resulting gamut
-        ab_gamut_hull = ConvexHull(ab_gamut)
-        ab_gamut_poly = Polygon(ab_gamut[ab_gamut_hull.vertices, :])
+            _rgb_space = np.meshgrid(rgb_range, rgb_range, rgb_range)
+            rgb_space = np.stack(_rgb_space, -1).reshape(-1, 3)
 
-        # use polygon to construct "in-gamut" mask for discretized ab space
-        ab_gamut_mask = np.full(ab_grid.shape[:-1], False, dtype=bool)
+            # convert points into Lab space
+            ab_gamut = np.squeeze(color.rgb2lab(rgb_space[np.newaxis]))[:, 1:]
 
-        for a in range(ab_grid.shape[0]):
-            for b in range(ab_grid.shape[1]):
-                for offs_a, offs_b in product([0, cls.AB_BINSIZE],
-                                              [0, cls.AB_BINSIZE]):
-                    a_, b_ = ab_grid[a, b]
+            # find convex hull polygon of the resulting gamut
+            ab_gamut_hull = ConvexHull(ab_gamut)
+            ab_gamut_poly = Polygon(ab_gamut[ab_gamut_hull.vertices, :])
 
-                    if ab_gamut_poly.contains(Point(a_ + offs_a, b_ + offs_b)):
-                        ab_gamut_mask[a, b] = True
+            # use polygon to construct "in-gamut" mask for discretized ab space
+            for a in range(ab.shape[0]):
+                for b in range(ab.shape[1]):
+                    for offs_a, offs_b in product([0, cls.AB_BINSIZE],
+                                                  [0, cls.AB_BINSIZE]):
+                        a_, b_ = ab[a, b]
+
+                        if ab_gamut_poly.contains(Point(a_ + offs_a, b_ + offs_b)):
+                            ab_gamut_mask[a, b] = True
 
         return ab_gamut_mask
 
@@ -68,8 +89,8 @@ class CIELAB:
         assert l >= 50 and l <= 100
 
         # construct Lab color space slice for given L
-        l_ = np.full(self._ab_grid.shape[:2], l, dtype=self._ab_grid.dtype)
-        color_space_lab = np.dstack((l_, self._ab_grid))
+        l_ = np.full(self._ab.shape[:2], l, dtype=self._ab.dtype)
+        color_space_lab = np.dstack((l_, self._ab))
 
         # convert to RGB
         color_space_rgb = color.lab2rgb(color_space_lab)
