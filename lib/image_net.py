@@ -21,6 +21,8 @@ class TinyImageNet(Dataset):
     def __init__(self,
                  root,
                  dataset=DATASET_TRAIN,
+                 dtype_float=np.float32,
+                 dtype_int=np.int64,
                  labeled=True,
                  normalized=True,
                  cielab=CIELAB(),
@@ -29,6 +31,7 @@ class TinyImageNet(Dataset):
 
         self.set_root(root)
         self.set_dataset(dataset)
+        self.set_dtype(dtype_float, dtype_int)
         self.set_labeled(labeled)
         self.set_normalized(normalized)
         self.set_cielab(cielab)
@@ -71,6 +74,10 @@ class TinyImageNet(Dataset):
             raise ValueError(fmt.format(', '.join(valid)))
 
         self.dataset = dataset
+
+    def set_dtype(self, dtype_float, dtype_int):
+        self.dtype_float = dtype_float
+        self.dtype_int = dtype_int
 
     def set_labeled(self, labeled):
         self.labeled = labeled
@@ -135,7 +142,7 @@ class TinyImageNet(Dataset):
             if self.labeled:
                 raise ValueError("can not produce labeled data from RGB images")
 
-            return self._reshape_image(image_rgb)
+            return self._process_image(image_rgb)
 
         elif self.color_space == self.COLOR_SPACE_LAB:
             image_lab = self.cielab.rgb_to_lab(image_rgb)
@@ -146,9 +153,24 @@ class TinyImageNet(Dataset):
                 if self.normalized:
                     l = (l - 50) / 50
 
-                return self._reshape_image(l), self._reshape_image(ab)
+                return self._process_image(l), self._process_image(ab)
             else:
-                return self._reshape_image(image_lab)
+                return self._process_image(image_lab)
+
+    def _process_image(self, image):
+        assert len(image.shape) == 2 or len(image.shape) == 3
+
+        if np.issubdtype(image.dtype, np.integer):
+            dtype = self.dtype_int
+        else:
+            dtype = self.dtype_float
+
+        image = image.astype(dtype)
+
+        if len(image.shape) == 2:
+            return image[np.newaxis]
+        else:
+            return np.moveaxis(image, -1, 0)
 
     @staticmethod
     def _listdir(path, sort_num=False):
@@ -168,12 +190,3 @@ class TinyImageNet(Dataset):
             files.sort()
 
         return files
-
-    @staticmethod
-    def _reshape_image(image):
-        assert len(image.shape) == 2 or len(image.shape) == 3
-
-        if len(image.shape) == 2:
-            return image[np.newaxis]
-        else:
-            return np.moveaxis(image, -1, 0)
