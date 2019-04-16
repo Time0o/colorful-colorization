@@ -81,7 +81,7 @@ class ColorizationNetwork(nn.Module):
                 dilation=dilation,
                 batchnorm=(batchnorm and i == block_depth - 1))
 
-            block.add_module(name + f'_{i+1}', layer)
+            block.add_module('{}_{}'.format(name, i + 1), layer)
 
         return block
 
