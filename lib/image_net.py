@@ -164,7 +164,7 @@ class TinyImageNet(Dataset):
             image_lab = self.cielab.rgb_to_lab(image_rgb)
 
             if self.labeled:
-                l, ab = self.cielab.dissemble(image_lab)
+                l, ab = self.cielab.dissemble(image_lab, expand_q=True)
 
                 if self.normalized:
                     l = (l - 50) / 50
