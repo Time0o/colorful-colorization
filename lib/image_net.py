@@ -21,6 +21,7 @@ class TinyImageNet(Dataset):
                  root,
                  dataset=DATASET_TRAIN,
                  labeled=True,
+                 normalized=True,
                  cielab=CIELAB(),
                  color_space=COLOR_SPACE_LAB,
                  transform=None):
@@ -28,6 +29,7 @@ class TinyImageNet(Dataset):
         self.set_root(root)
         self.set_dataset(dataset)
         self.set_labeled(labeled)
+        self.set_normalized(normalized)
         self.set_cielab(cielab)
         self.set_color_space(color_space)
 
@@ -71,6 +73,9 @@ class TinyImageNet(Dataset):
 
     def set_labeled(self, labeled):
         self.labeled = labeled
+
+    def set_normalized(self, normalized):
+        self.normalized = normalized
 
     def set_cielab(self, cielab):
         self.cielab = cielab
@@ -135,7 +140,12 @@ class TinyImageNet(Dataset):
             image_lab = self.cielab.rgb_to_lab(image_rgb)
 
             if self.labeled:
-                return self.cielab.dissemble(image_lab)
+                l, ab = self.cielab.dissemble(image_lab)
+
+                if self.normalized:
+                    l = (l - 50) / 50
+
+                return l, ab
             else:
                 return image_lab
 
