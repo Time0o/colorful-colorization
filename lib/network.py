@@ -13,32 +13,32 @@ class ColorizationNetwork(nn.Module):
     WEIGHT_DECAY = 1e-3
     LR_INIT = 3e-5
 
-    def __init__(self):
+    def __init__(self, input_size):
         super().__init__()
 
-        self.conv1 = self._create_block(
-            'conv1', (2, 1, 64), strides=[1, 2])
+        self.conv1, input_size = self._create_block(
+            'conv1', (2, input_size, 1, 64), strides=[1, 2])
 
-        self.conv2 = self._create_block(
-            'conv2', (2, 64, 128), strides=[1, 2])
+        self.conv2, input_size = self._create_block(
+            'conv2', (2, input_size, 64, 128), strides=[1, 2])
 
-        self.conv3 = self._create_block(
-            'conv3', (3, 128, 256), strides=[1, 1, 2])
+        self.conv3, input_size = self._create_block(
+            'conv3', (3, input_size, 128, 256), strides=[1, 1, 2])
 
-        self.conv4 = self._create_block(
-            'conv4', (3, 256, 512), strides=[1, 1, 1])
+        self.conv4, input_size = self._create_block(
+            'conv4', (3, input_size, 256, 512), strides=[1, 1, 1])
 
-        self.conv5 = self._create_block(
-            'conv5', (3, 512, 512), strides=[1, 1, 1], dilation=2)
+        self.conv5, input_size = self._create_block(
+            'conv5', (3, input_size, 512, 512), strides=[1, 1, 1], dilation=2)
 
-        self.conv6 = self._create_block(
-            'conv6', (3, 512, 512), strides=[1, 1, 1], dilation=2)
+        self.conv6, input_size = self._create_block(
+            'conv6', (3, input_size, 512, 512), strides=[1, 1, 1], dilation=2)
 
-        self.conv7 = self._create_block(
-            'conv7', (3, 512, 256), strides=[1, 1, 1])
+        self.conv7, input_size = self._create_block(
+            'conv7', (3, input_size, 512, 256), strides=[1, 1, 1])
 
-        self.conv8 = self._create_block(
-            'conv8', (3, 256, 128), strides=[.5, 1, 1], batchnorm=False)
+        self.conv8, input_size = self._create_block(
+            'conv8', (3, input_size, 256, 128), strides=[.5, 1, 1], batchnorm=False)
 
         self.conv9 = nn.Conv2d(in_channels=128,
                                out_channels=ABGamut.EXPECTED_SIZE,
@@ -70,13 +70,14 @@ class ColorizationNetwork(nn.Module):
                       dilation=1,
                       batchnorm=True):
 
-        block_depth, input_depth, output_depth = dims
+        block_depth, input_size, input_depth, output_depth = dims
 
         # chain layers
         block = nn.Sequential()
 
         for i in range(block_depth):
             layer = cls._append_layer(
+                input_size=input_size,
                 input_depth=(input_depth if i == 0 else output_depth),
                 output_depth=output_depth,
                 stride=strides[i],
@@ -85,10 +86,14 @@ class ColorizationNetwork(nn.Module):
 
             block.add_module('{}_{}'.format(name, i + 1), layer)
 
-        return block
+            # update input size based on stride
+            input_size /= strides[i]
+
+        return block, input_size
 
     @classmethod
     def _append_layer(cls,
+                      input_size,
                       input_depth,
                       output_depth,
                       stride=1,
@@ -105,12 +110,22 @@ class ColorizationNetwork(nn.Module):
 
             stride = 1
 
+        # adjust padding for dilated convolutions
+        if dilation > 1:
+            padding = cls._dilation_padding(
+                i=input_size,
+                k=cls.KERNEL_SIZE,
+                s=stride,
+                d=dilation)
+        else:
+            padding = (cls.KERNEL_SIZE - 1) // 2
+
         # convolution
         conv = nn.Conv2d(in_channels=input_depth,
                          out_channels=output_depth,
                          kernel_size=cls.KERNEL_SIZE,
                          stride=stride,
-                         padding=(cls.KERNEL_SIZE - 1) // 2,
+                         padding=padding,
                          dilation=dilation)
 
         layer.add_module('conv', conv)
@@ -127,3 +142,10 @@ class ColorizationNetwork(nn.Module):
             layer.add_module('batchnorm', bn)
 
         return layer
+
+    @staticmethod
+    def _dilation_padding(i, k, s, d):
+        # calculates necessary padding to preserve input shape when applying
+        # dilated convolution, unlike Keras, PyTorch does not provide a way to
+        # calculate this automatidally
+        return int(((i - 1) * (s - 1) + d * (k - 1)) / 2)
