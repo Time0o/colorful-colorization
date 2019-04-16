@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.nn.functional as F
 
 from cielab import ABGamut
 
@@ -94,6 +95,25 @@ class ColorizationNetwork(nn.Module):
                       batchnorm=False):
 
         layer = nn.Sequential()
+
+        # upsampling
+        if stride < 1:
+            # thanks, zuckerberg...
+            class Interpolate(nn.Module):
+                def __init__(self, scale_factor):
+                    super().__init__()
+
+                    self.interp = F.interpolate
+                    self.scale_factor = scale_factor
+
+                def forward(self, x):
+                    return self.interp(x, scale_factor=self.scale_factor)
+
+            upsample = Interpolate(1 / stride)
+
+            layer.add_module('upsample', upsample)
+
+            stride = 1
 
         # convolution
         conv = nn.Conv2d(in_channels=input_depth,
