@@ -99,6 +99,7 @@ class ColorizationNetwork(nn.Module):
         conv = nn.Conv2d(in_channels=input_depth,
                          out_channels=output_depth,
                          kernel_size=cls.KERNEL_SIZE,
+                         stride=stride,
                          padding=(cls.KERNEL_SIZE - 1) // 2,
                          dilation=dilation)
 
