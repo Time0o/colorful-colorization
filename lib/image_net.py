@@ -3,6 +3,7 @@ import pickle
 import re
 from glob import glob
 
+import numpy as np
 from skimage import io, color
 from torch.utils.data.dataset import Dataset
 
@@ -134,7 +135,7 @@ class TinyImageNet(Dataset):
             if self.labeled:
                 raise ValueError("can not produce labeled data from RGB images")
 
-            return image_rgb
+            return self._reshape_image(image_rgb)
 
         elif self.color_space == self.COLOR_SPACE_LAB:
             image_lab = self.cielab.rgb_to_lab(image_rgb)
@@ -145,9 +146,9 @@ class TinyImageNet(Dataset):
                 if self.normalized:
                     l = (l - 50) / 50
 
-                return l, ab
+                return self._reshape_image(l), self._reshape_image(ab)
             else:
-                return image_lab
+                return self._reshape_image(image_lab)
 
     @staticmethod
     def _listdir(path, sort_num=False):
@@ -167,3 +168,12 @@ class TinyImageNet(Dataset):
             files.sort()
 
         return files
+
+    @staticmethod
+    def _reshape_image(image):
+        assert len(image.shape) == 2 or len(image.shape) == 3
+
+        if len(image.shape) == 2:
+            return image[np.newaxis]
+        else:
+            return np.moveaxis(image, -1, 0)
