@@ -4,7 +4,7 @@ import re
 from glob import glob
 
 import numpy as np
-from skimage import io, color
+from skimage import color, io, transform
 from torch.utils.data.dataset import Dataset
 
 from cielab import CIELAB
@@ -15,12 +15,15 @@ class TinyImageNet(Dataset):
     DATASET_VAL = 'val'
     DATASET_TEST = 'test'
 
+    IMAGE_SIZE_ACTUAL = 64
+
     COLOR_SPACE_RGB = 'rgb'
     COLOR_SPACE_LAB = 'lab'
 
     def __init__(self,
                  root,
                  dataset=DATASET_TRAIN,
+                 image_size=IMAGE_SIZE_ACTUAL,
                  dtype_float=np.float32,
                  dtype_int=np.int64,
                  labeled=True,
@@ -31,6 +34,7 @@ class TinyImageNet(Dataset):
 
         self.set_root(root)
         self.set_dataset(dataset)
+        self.set_image_size(image_size)
         self.set_dtype(dtype_float, dtype_int)
         self.set_labeled(labeled)
         self.set_normalized(normalized)
@@ -74,6 +78,11 @@ class TinyImageNet(Dataset):
             raise ValueError(fmt.format(', '.join(valid)))
 
         self.dataset = dataset
+
+    def set_image_size(self, image_size):
+        assert image_size >= self.IMAGE_SIZE_ACTUAL
+
+        self.image_size = image_size
 
     def set_dtype(self, dtype_float, dtype_int):
         self.dtype_float = dtype_float
@@ -127,9 +136,7 @@ class TinyImageNet(Dataset):
             index_rgb_only = []
 
             for i, path in enumerate(index):
-                img = io.imread(path)
-
-                if len(img.shape) == 3 and img.shape[2] == 3:
+                if self._is_rgb(io.imread(path)):
                     index_rgb_only.append(path)
 
             self._indices[dataset] = index_rgb_only
@@ -137,6 +144,15 @@ class TinyImageNet(Dataset):
     def _getitem(self, index):
         image_path = self._indices[self.dataset][index]
         image_rgb = io.imread(image_path)
+
+        assert self._is_rgb(image_rgb) and self._has_right_size(image_rgb)
+
+        # scale image to desired size
+        if self.image_size != self.IMAGE_SIZE_ACTUAL:
+            image_rgb = transform.pyramid_expand(
+                image_rgb,
+                upscale=(self.image_size / self.IMAGE_SIZE_ACTUAL),
+                multichannel=True)
 
         if self.color_space == self.COLOR_SPACE_RGB:
             if self.labeled:
@@ -190,3 +206,11 @@ class TinyImageNet(Dataset):
             files.sort()
 
         return files
+
+    @staticmethod
+    def _is_rgb(image):
+        return len(image.shape) == 3 and image.shape[2] == 3
+
+    @classmethod
+    def _has_right_size(cls, image):
+        return image.shape[0] == image.shape[1] == cls.IMAGE_SIZE_ACTUAL
