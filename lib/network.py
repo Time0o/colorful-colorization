@@ -1,8 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
 from cielab import ABGamut
 from interpolate import Interpolate
+from loss import CrossEntropyLoss2d
 
 
 class ColorizationNetwork(nn.Module):
@@ -16,33 +18,37 @@ class ColorizationNetwork(nn.Module):
     def __init__(self, input_size):
         super().__init__()
 
-        self.conv1, input_size = self._create_block(
-            'conv1', (2, input_size, 1, 64), strides=[1, 2])
+        size = input_size
 
-        self.conv2, input_size = self._create_block(
-            'conv2', (2, input_size, 64, 128), strides=[1, 2])
+        self.conv1, size = self._create_block(
+            'conv1', (2, size, 1, 64), strides=[1, 2])
 
-        self.conv3, input_size = self._create_block(
-            'conv3', (3, input_size, 128, 256), strides=[1, 1, 2])
+        self.conv2, size = self._create_block(
+            'conv2', (2, size, 64, 128), strides=[1, 2])
 
-        self.conv4, input_size = self._create_block(
-            'conv4', (3, input_size, 256, 512), strides=[1, 1, 1])
+        self.conv3, size = self._create_block(
+            'conv3', (3, size, 128, 256), strides=[1, 1, 2])
 
-        self.conv5, input_size = self._create_block(
-            'conv5', (3, input_size, 512, 512), strides=[1, 1, 1], dilation=2)
+        self.conv4, size = self._create_block(
+            'conv4', (3, size, 256, 512), strides=[1, 1, 1])
 
-        self.conv6, input_size = self._create_block(
-            'conv6', (3, input_size, 512, 512), strides=[1, 1, 1], dilation=2)
+        self.conv5, size = self._create_block(
+            'conv5', (3, size, 512, 512), strides=[1, 1, 1], dilation=2)
 
-        self.conv7, input_size = self._create_block(
-            'conv7', (3, input_size, 512, 256), strides=[1, 1, 1])
+        self.conv6, size = self._create_block(
+            'conv6', (3, size, 512, 512), strides=[1, 1, 1], dilation=2)
 
-        self.conv8, input_size = self._create_block(
-            'conv8', (3, input_size, 256, 128), strides=[.5, 1, 1], batchnorm=False)
+        self.conv7, size = self._create_block(
+            'conv7', (3, size, 512, 256), strides=[1, 1, 1])
 
-        self.conv9 = nn.Conv2d(in_channels=128,
-                               out_channels=ABGamut.EXPECTED_SIZE,
-                               kernel_size=1)
+        self.conv8, size = self._create_block(
+            'conv8', (3, size, 256, 128), strides=[.5, 1, 1], batchnorm=False)
+
+        self.classify = nn.Conv2d(in_channels=128,
+                                  out_channels=ABGamut.EXPECTED_SIZE,
+                                  kernel_size=1)
+
+        self.upsample = Interpolate(input_size / size)
 
         self._blocks = [
             self.conv1,
@@ -53,7 +59,8 @@ class ColorizationNetwork(nn.Module):
             self.conv6,
             self.conv7,
             self.conv8,
-            self.conv9
+            self.classify,
+            self.upsample
         ]
 
     def forward(self, x):
@@ -61,6 +68,67 @@ class ColorizationNetwork(nn.Module):
             x = block(x)
 
         return x
+
+    def run_training(self, dataloader, iterations, device=None, verbosity=0):
+        # switch to training mode (essential for batch normalization)
+        was_training = self.training
+
+        if not was_training:
+            self.train()
+
+        # move model to device
+        if device is not None:
+            self.to(device)
+
+        # validate dataset properties
+        dataset = dataloader.dataset
+
+        assert dataset.color_space == dataset.COLOR_SPACE_LAB
+        assert dataset.labeled
+
+        # create optimizer
+        op = optim.Adam(self.parameters(),
+                        lr=self.LR_INIT,
+                        betas=(self.BETA1, self.BETA2),
+                        weight_decay=self.WEIGHT_DECAY)
+
+        # optimization loop
+        criterion = CrossEntropyLoss2d()
+
+        i = 1
+        while i <= iterations:
+            for l, ab in dataloader:
+                # move data to device
+                if device is not None:
+                    l, ab = l.to(device), ab.to(device)
+
+                op.zero_grad()
+
+                loss = criterion(self(l), ab)
+                loss.backward()
+
+                if verbosity > 0:
+                    fmt = "iteration {:,}/{:,}: {:1.3e}"
+                    msg = fmt.format(i, iterations, loss)
+
+                    if verbosity == 1:
+                        end = '\n' if i == iterations else ''
+                        msg = '\r' + msg.ljust(50)
+                    elif verbosity > 1:
+                        end = '\n'
+
+                    print(msg, end=end, flush=True)
+
+                op.step()
+
+                i += 1
+
+                if i > iterations:
+                    break
+
+        # reset model mode
+        if not was_training:
+            self.eval()
 
     @classmethod
     def _create_block(cls,
