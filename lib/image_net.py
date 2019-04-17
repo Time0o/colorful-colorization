@@ -20,6 +20,10 @@ class TinyImageNet(Dataset):
     COLOR_SPACE_RGB = 'rgb'
     COLOR_SPACE_LAB = 'lab'
 
+    CLEAN_ASSUME = 'assume'
+    CLEAN_SKIP = 'skip'
+    CLEAN_PURGE = 'purge'
+
     def __init__(self,
                  root,
                  dataset=DATASET_TRAIN,
@@ -30,6 +34,7 @@ class TinyImageNet(Dataset):
                  normalized=True,
                  cielab=CIELAB(),
                  color_space=COLOR_SPACE_LAB,
+                 clean=CLEAN_ASSUME,
                  transform=None):
 
         self.set_root(root)
@@ -42,7 +47,7 @@ class TinyImageNet(Dataset):
         self.set_color_space(color_space)
 
         self._build_indices()
-        self._filter_non_rgb()
+        self._clean(clean)
 
     @staticmethod
     def restore(path):
@@ -131,13 +136,23 @@ class TinyImageNet(Dataset):
             images_root = os.path.join(dataset_path, 'images')
             self._indices[dataset] = self._listdir(images_root, sort_num=True)
 
-    def _filter_non_rgb(self):
+    def _clean(self, clean):
+        if clean == self.CLEAN_SKIP:
+            self._filter_non_rgb()
+        elif clean == self.CLEAN_PURGE:
+            self._filter_non_rgb(purge=True)
+        elif clean != self.CLEAN_ASSUME:
+            raise ValueError("invalid cleaning procedure")
+
+    def _filter_non_rgb(self, purge=False):
         for dataset, index in self._indices.items():
             index_rgb_only = []
 
             for i, path in enumerate(index):
                 if self._is_rgb(io.imread(path)):
                     index_rgb_only.append(path)
+                elif purge:
+                    os.remove(path)
 
             self._indices[dataset] = index_rgb_only
 
