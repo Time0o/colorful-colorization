@@ -30,6 +30,7 @@ class TinyImageNet(Dataset):
                  image_size=IMAGE_SIZE_ACTUAL,
                  dtype=np.float32,
                  color_space=COLOR_SPACE_LAB,
+                 limit=None,
                  clean=CLEAN_ASSUME,
                  transform=None):
 
@@ -38,17 +39,10 @@ class TinyImageNet(Dataset):
         self.set_image_size(image_size)
         self.set_dtype(dtype)
         self.set_color_space(color_space)
+        self.set_limit(limit)
 
         self._build_indices()
         self._clean(clean)
-
-    @staticmethod
-    def restore(path):
-        if not path.endswith('.pickle'):
-            path += '.pickle'
-
-        with open(path, 'rb') as f:
-            return pickle.load(f)
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -59,7 +53,12 @@ class TinyImageNet(Dataset):
             return self._getitem(index)
 
     def __len__(self):
-        return len(self._indices[self.dataset])
+        l = len(self._indices[self.dataset])
+
+        if self.limit is None:
+            return l
+        else:
+            return min(self.limit, l)
 
     def set_root(self, root):
         if not os.path.isdir(root):
@@ -91,12 +90,13 @@ class TinyImageNet(Dataset):
 
         self.color_space = color_space
 
-    def cache(self, path):
-        if not path.endswith('.pickle'):
-            path += '.pickle'
+    def set_limit(self, n):
+        self.limit = n
 
-        with open(path, 'wb') as f:
-            pickle.dump(self, f)
+    def shuffle(self):
+        i = np.random.permutation(len(self))
+
+        self._indices[self.dataset] = self._indices[self.dataset][i]
 
     def _build_indices(self):
         self._indices = {}
