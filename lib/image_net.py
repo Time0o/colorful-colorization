@@ -28,11 +28,7 @@ class TinyImageNet(Dataset):
                  root,
                  dataset=DATASET_TRAIN,
                  image_size=IMAGE_SIZE_ACTUAL,
-                 dtype_float=np.float32,
-                 dtype_int=np.int64,
-                 labeled=True,
-                 normalized=True,
-                 cielab=CIELAB(),
+                 dtype=np.float32,
                  color_space=COLOR_SPACE_LAB,
                  clean=CLEAN_ASSUME,
                  transform=None):
@@ -40,10 +36,7 @@ class TinyImageNet(Dataset):
         self.set_root(root)
         self.set_dataset(dataset)
         self.set_image_size(image_size)
-        self.set_dtype(dtype_float, dtype_int)
-        self.set_labeled(labeled)
-        self.set_normalized(normalized)
-        self.set_cielab(cielab)
+        self.set_dtype(dtype)
         self.set_color_space(color_space)
 
         self._build_indices()
@@ -89,18 +82,8 @@ class TinyImageNet(Dataset):
 
         self.image_size = image_size
 
-    def set_dtype(self, dtype_float, dtype_int):
-        self.dtype_float = dtype_float
-        self.dtype_int = dtype_int
-
-    def set_labeled(self, labeled):
-        self.labeled = labeled
-
-    def set_normalized(self, normalized):
-        self.normalized = normalized
-
-    def set_cielab(self, cielab):
-        self.cielab = cielab
+    def set_dtype(self, dtype):
+        self.dtype = dtype
 
     def set_color_space(self, color_space):
         if color_space not in [self.COLOR_SPACE_RGB, self.COLOR_SPACE_LAB]:
@@ -170,38 +153,15 @@ class TinyImageNet(Dataset):
                 multichannel=True)
 
         if self.color_space == self.COLOR_SPACE_RGB:
-            if self.labeled:
-                raise ValueError("can not produce labeled data from RGB images")
-
             return self._process_image(image_rgb)
-
         elif self.color_space == self.COLOR_SPACE_LAB:
-            image_lab = self.cielab.rgb_to_lab(image_rgb)
-
-            if self.labeled:
-                l, ab = self.cielab.dissemble(image_lab, expand_q=True)
-
-                if self.normalized:
-                    l = (l - 50) / 50
-
-                return self._process_image(l), self._process_image(ab)
-            else:
-                return self._process_image(image_lab)
+            image_lab = CIELAB.rgb_to_lab(image_rgb)
+            return self._process_image(image_lab)
 
     def _process_image(self, image):
-        assert len(image.shape) == 2 or len(image.shape) == 3
+        image = image.astype(self.dtype)
 
-        if np.issubdtype(image.dtype, np.integer):
-            dtype = self.dtype_int
-        else:
-            dtype = self.dtype_float
-
-        image = image.astype(dtype)
-
-        if len(image.shape) == 2:
-            return image[np.newaxis]
-        else:
-            return np.moveaxis(image, -1, 0)
+        return np.moveaxis(image, -1, 0)
 
     @staticmethod
     def _listdir(path, sort_num=False):
