@@ -20,6 +20,8 @@ class ColorizationNetwork(nn.Module):
     def __init__(self, input_size, cielab):
         super().__init__()
 
+        self.cielab = cielab
+
         # prediction
         size = input_size
 
@@ -66,10 +68,13 @@ class ColorizationNetwork(nn.Module):
         # label transformation
         self.downsample =  Interpolate(size / input_size)
 
-        self.encode_ab = EncodeAB(cielab)
+        self.encode_ab = EncodeAB(self.cielab)
 
     def forward(self, img):
         l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+
+        # normalize lightness
+        l = (l - self.cielab.L_MEAN) / self.cielab.L_STD
 
         # prediction
         q_pred = l

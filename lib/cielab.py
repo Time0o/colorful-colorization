@@ -37,6 +37,8 @@ class CIELAB:
     RGB_RANGE = [0, 1, RGB_RESOLUTION]
     RGB_DTYPE = np.float64
 
+    L_MEAN = 50
+    L_STD = 50
     Q_DTYPE = np.int64
 
     def __init__(self, gamut=ABGamut.auto()):
