@@ -1,5 +1,6 @@
 from time import time
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -67,7 +68,12 @@ class ColorizationNetwork(nn.Module):
 
     def forward(self, x):
         for block in self._blocks:
-            x = block(x)
+            if self._is_dilating_block(block):
+                torch.backends.cudnn.benchmark = True
+                x = block(x)
+                torch.backends.cudnn.benchmark = False
+            else:
+                x = block(x)
 
         return x
 
@@ -252,3 +258,15 @@ class ColorizationNetwork(nn.Module):
         # dilated convolution, unlike Keras, PyTorch does not provide a way to
         # calculate this automatidally
         return int(((i - 1) * (s - 1) + d * (k - 1)) / 2)
+
+    @staticmethod
+    def _is_dilating_block(block):
+        # returns True if any of the layers in a block use dilated convolutions,
+        # in that case we have to temporarily set torch.backends.cudnn.benchmark
+        # to True because a forward pass through the those layers will otherwise
+        # be extermely slow due to a bug in PyTorch
+        for layer in list(block.modules())[1:]:
+            if isinstance(layer, nn.Conv2d) and layer.dilation != (1, 1):
+                return True
+
+        return False
