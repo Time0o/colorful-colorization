@@ -1,11 +1,10 @@
-from time import time
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
 from cielab import ABGamut
+from encode_ab import EncodeAB
 from interpolate import Interpolate
 from loss import CrossEntropyLoss2d
 
@@ -18,9 +17,10 @@ class ColorizationNetwork(nn.Module):
     WEIGHT_DECAY = 1e-3
     LR_INIT = 3e-5
 
-    def __init__(self, input_size):
+    def __init__(self, input_size, cielab):
         super().__init__()
 
+        # prediction
         size = input_size
 
         self.conv1, size = self._create_block(
@@ -51,8 +51,6 @@ class ColorizationNetwork(nn.Module):
                                   out_channels=ABGamut.EXPECTED_SIZE,
                                   kernel_size=1)
 
-        self.upsample = Interpolate(input_size / size)
-
         self._blocks = [
             self.conv1,
             self.conv2,
@@ -62,22 +60,40 @@ class ColorizationNetwork(nn.Module):
             self.conv6,
             self.conv7,
             self.conv8,
-            self.classify,
-            self.upsample
+            self.classify
         ]
 
-    def forward(self, x):
+        # label transformation
+        self.downsample =  Interpolate(size / input_size)
+
+        self.encode_ab = EncodeAB(cielab)
+
+    def forward(self, img):
+        l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+
+        # prediction
+        q_pred = l
         for block in self._blocks:
             if self._is_dilating_block(block):
                 torch.backends.cudnn.benchmark = True
-                x = block(x)
+                q_pred = block(q_pred)
                 torch.backends.cudnn.benchmark = False
             else:
-                x = block(x)
+                q_pred = block(q_pred)
 
-        return x
+        # label transformation
+        ab = self.downsample(ab)
+
+        q_actual = self.encode_ab(ab)
+
+        return q_pred, q_actual
 
     def run_training(self, dataloader, iterations, device=None, verbosity=0):
+        # validate dataset properties
+        dataset = dataloader.dataset
+
+        assert dataset.color_space == dataset.COLOR_SPACE_LAB
+
         # switch to training mode (essential for batch normalization)
         was_training = self.training
 
@@ -87,12 +103,6 @@ class ColorizationNetwork(nn.Module):
         # move model to device
         if device is not None:
             self.to(device)
-
-        # validate dataset properties
-        dataset = dataloader.dataset
-
-        assert dataset.color_space == dataset.COLOR_SPACE_LAB
-        assert dataset.labeled
 
         # create optimizer
         op = optim.Adam(self.parameters(),
@@ -105,50 +115,23 @@ class ColorizationNetwork(nn.Module):
 
         i = 1
         while i <= iterations:
-            it = iter(dataloader)
-
-            while True:
-                # get next batch
-                start = time()
-
-                try:
-                    l, q = next(it)
-                except StopIteration:
-                    break
-
-                t_load = time() - start
-
-                if verbosity > 2:
-                    batch_GiB = self._tensor_GiB(l) + self._tensor_GiB(q)
-
-                    fmt = "loaded batch of size {} ({:.2} GiB) in {:.3} seconds"
-                    msg = fmt.format(dataloader.batch_size, batch_GiB, t_load)
-
-                    print(msg, flush=True)
-
+            for img in dataloader:
                 # move data to device
                 if device is not None:
-                    l, q = l.to(device), q.to(device)
+                    img = img.to(device)
 
                 # perform parameter update
-                start = time()
-
                 op.zero_grad()
 
-                loss = criterion(self(l), q)
+                q_pred, q_actual = self(img)
+                loss = criterion(q_pred, q_actual)
                 loss.backward()
 
                 op.step()
 
-                t_update = time() - start
-
                 if verbosity > 0:
-                    if verbosity > 2:
-                        fmt = "iteration {:,}/{:,}: ran in {:.3} seconds, loss was {:1.3e}"
-                        msg = fmt.format(i, iterations, t_update, loss)
-                    else:
-                        fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
-                        msg = fmt.format(i, iterations, loss)
+                    fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
+                    msg = fmt.format(i, iterations, loss)
 
                     if verbosity == 1:
                         end = '\n' if i == iterations else ''
