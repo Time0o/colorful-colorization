@@ -9,13 +9,13 @@ class EncodeAB:
         self.ab_to_q_cuda = self.ab_to_q.cuda()
 
     def __call__(self, ab):
-        ab = self._discretize(ab)
+        ab_discrete = self._discretize(ab)
 
-        q = self._bin(ab)
+        q = self._bin(ab_discrete)
 
         q = self._expand(q)
 
-        return q
+        return q.type(ab.dtype)
 
     def _discretize(self, ab):
         return ((ab - self.cielab.AB_RANGE[0]) / self.cielab.AB_BINSIZE).long()
@@ -38,7 +38,7 @@ class EncodeAB:
     def _expand(self, q):
         n, _, h, w = q.shape
 
-        q_expanded = q.new_empty(n, self.cielab.gamut.EXPECTED_SIZE, h, w)
+        q_expanded = q.new_zeros(n, self.cielab.gamut.EXPECTED_SIZE, h, w)
 
         q_expanded.scatter_(1, q, torch.ones_like(q))
 
