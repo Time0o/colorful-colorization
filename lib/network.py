@@ -1,3 +1,5 @@
+from time import time
+
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -97,19 +99,50 @@ class ColorizationNetwork(nn.Module):
 
         i = 1
         while i <= iterations:
-            for l, ab in dataloader:
+            it = iter(dataloader)
+
+            while True:
+                # get next batch
+                start = time()
+
+                try:
+                    l, q = next(it)
+                except StopIteration:
+                    break
+
+                t_load = time() - start
+
+                if verbosity > 2:
+                    batch_GiB = self._tensor_GiB(l) + self._tensor_GiB(q)
+
+                    fmt = "loaded batch of size {} ({:.2} GiB) in {:.3} seconds"
+                    msg = fmt.format(dataloader.batch_size, batch_GiB, t_load)
+
+                    print(msg, flush=True)
+
                 # move data to device
                 if device is not None:
-                    l, ab = l.to(device), ab.to(device)
+                    l, q = l.to(device), q.to(device)
+
+                # perform parameter update
+                start = time()
 
                 op.zero_grad()
 
-                loss = criterion(self(l), ab)
+                loss = criterion(self(l), q)
                 loss.backward()
 
+                op.step()
+
+                t_update = time() - start
+
                 if verbosity > 0:
-                    fmt = "iteration {:,}/{:,}: {:1.3e}"
-                    msg = fmt.format(i, iterations, loss)
+                    if verbosity > 2:
+                        fmt = "iteration {:,}/{:,}: ran in {:.3} seconds, loss was {:1.3e}"
+                        msg = fmt.format(i, iterations, t_update, loss)
+                    else:
+                        fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
+                        msg = fmt.format(i, iterations, loss)
 
                     if verbosity == 1:
                         end = '\n' if i == iterations else ''
@@ -118,8 +151,6 @@ class ColorizationNetwork(nn.Module):
                         end = '\n'
 
                     print(msg, end=end, flush=True)
-
-                op.step()
 
                 i += 1
 
@@ -210,6 +241,10 @@ class ColorizationNetwork(nn.Module):
             layer.add_module('batchnorm', bn)
 
         return layer
+
+    @staticmethod
+    def _tensor_GiB(t):
+        return t.element_size() * t.nelement() / 1024**3
 
     @staticmethod
     def _dilation_padding(i, k, s, d):
