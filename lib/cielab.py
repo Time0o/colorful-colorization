@@ -40,16 +40,16 @@ class CIELAB:
     Q_DTYPE = np.int64
 
     def __init__(self, gamut=ABGamut.auto()):
-        self._gamut = gamut
+        self.gamut = gamut
 
-        self._a, self._b, self._ab = self._get_ab()
+        a, b, self.ab = self._get_ab()
 
-        self._ab_gamut_mask = self._get_ab_gamut_mask(
-            self._a, self._b, self._ab, self._gamut)
+        self.ab_gamut_mask = self._get_ab_gamut_mask(
+            a, b, self.ab, self.gamut)
 
-        self._ab_to_q = self._get_ab_to_q(self._ab_gamut_mask)
+        self.ab_to_q = self._get_ab_to_q(self.ab_gamut_mask)
 
-        self._q_to_ab = self._get_q_to_ab(self._ab, self._ab_gamut_mask)
+        self.q_to_ab = self._get_q_to_ab(self.ab, self.ab_gamut_mask)
 
     @classmethod
     def _get_ab(cls):
@@ -150,41 +150,18 @@ class CIELAB:
     def lab_to_rgb(img):
         return color.lab2rgb(img)
 
-    def dissemble(self, img, expand_q=False):
-        l, a, b = img[:, :, 0], img[:, :, 1], img[:, :, 2]
-
-        a = np.digitize(a, self._a) - 1
-        b = np.digitize(b, self._b) - 1
-
-        q = np.empty(img.shape[:2], dtype=self.Q_DTYPE)
-
-        for r in range(img.shape[0]):
-            for c in range(img.shape[1]):
-                q[r, c] = self._ab_to_q[a[r, c], b[r, c]]
-
-        if expand_q:
-            q = np.eye(len(self._gamut.points), dtype=self.Q_DTYPE)[q]
-
-        return l, q
-
-    def reassemble(self, l, q, collapse_q=False):
-        if collapse_q:
-            q = q.argmax(axis=2)
-
-        return np.dstack((l, self._q_to_ab[q]))
-
     def plot_ab_gamut(self, l=50, ax=None):
         assert l >= 50 and l <= 100
 
         # construct Lab color space slice for given L
-        l_ = np.full(self._ab.shape[:2], l, dtype=self._ab.dtype)
-        color_space_lab = np.dstack((l_, self._ab))
+        l_ = np.full(self.ab.shape[:2], l, dtype=self.ab.dtype)
+        color_space_lab = np.dstack((l_, self.ab))
 
         # convert to RGB
         color_space_rgb = color.lab2rgb(color_space_lab)
 
         # mask out of gamut colors
-        color_space_rgb[~self._ab_gamut_mask, :] = 1
+        color_space_rgb[~self.ab_gamut_mask, :] = 1
 
         # display color space
         self._plot_ab_matrix(
