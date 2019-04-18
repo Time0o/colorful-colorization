@@ -179,6 +179,7 @@ class CIELAB:
                       end=('\n' if i == len(dataset) - 1 else ''),
                       flush=True)
 
+            img = np.moveaxis(img, 0, -1)
             ab_rounded = np.round(img[:, :, 1:].reshape(-1, 2)).astype(int)
             ab_offset = ab_rounded - self.AB_RANGE[0]
 
