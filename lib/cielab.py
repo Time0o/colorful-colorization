@@ -182,7 +182,7 @@ class CIELAB:
             ab_rounded = np.round(img[:, :, 1:].reshape(-1, 2)).astype(int)
             ab_offset = ab_rounded - self.AB_RANGE[0]
 
-            np.add.at(ab_acc, np.split(ab_offset, 2, axis=1), 1)
+            np.add.at(ab_acc, tuple(np.split(ab_offset, 2, axis=1)), 1)
 
         # convert to log scale
         ab_acc[ab_acc == 0] = np.nan
