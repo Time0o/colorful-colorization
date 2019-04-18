@@ -37,17 +37,21 @@ class CIELAB:
     RGB_RANGE = [0, 1, RGB_RESOLUTION]
     RGB_DTYPE = np.float64
 
+    L_MEAN = 50
+    L_STD = 50
     Q_DTYPE = np.int64
 
     def __init__(self, gamut=ABGamut.auto()):
-        self._a, self._b, self._ab = self._get_ab()
+        self.gamut = gamut
 
-        self._ab_gamut_mask = self._get_ab_gamut_mask(
-            self._a, self._b, self._ab, gamut)
+        a, b, self.ab = self._get_ab()
 
-        self._ab_to_q = self._get_ab_to_q(self._ab_gamut_mask)
+        self.ab_gamut_mask = self._get_ab_gamut_mask(
+            a, b, self.ab, self.gamut)
 
-        self._q_to_ab = self._get_q_to_ab(self._ab, self._ab_gamut_mask)
+        self.ab_to_q = self._get_ab_to_q(self.ab_gamut_mask)
+
+        self.q_to_ab = self._get_q_to_ab(self.ab, self.ab_gamut_mask)
 
     @classmethod
     def _get_ab(cls):
@@ -148,35 +152,18 @@ class CIELAB:
     def lab_to_rgb(img):
         return color.lab2rgb(img)
 
-    def dissemble(self, img):
-        l, a, b = img[:, :, 0], img[:, :, 1], img[:, :, 2]
-
-        a = np.digitize(a, self._a) - 1
-        b = np.digitize(b, self._b) - 1
-
-        q = np.empty(img.shape[:2], dtype=self.Q_DTYPE)
-
-        for r in range(img.shape[0]):
-            for c in range(img.shape[1]):
-                q[r, c] = self._ab_to_q[a[r, c], b[r, c]]
-
-        return l, q
-
-    def reassemble(self, l, q):
-        return np.dstack((l, self._q_to_ab[q]))
-
     def plot_ab_gamut(self, l=50, ax=None):
         assert l >= 50 and l <= 100
 
         # construct Lab color space slice for given L
-        l_ = np.full(self._ab.shape[:2], l, dtype=self._ab.dtype)
-        color_space_lab = np.dstack((l_, self._ab))
+        l_ = np.full(self.ab.shape[:2], l, dtype=self.ab.dtype)
+        color_space_lab = np.dstack((l_, self.ab))
 
         # convert to RGB
         color_space_rgb = color.lab2rgb(color_space_lab)
 
         # mask out of gamut colors
-        color_space_rgb[~self._ab_gamut_mask, :] = 1
+        color_space_rgb[~self.ab_gamut_mask, :] = 1
 
         # display color space
         self._plot_ab_matrix(
@@ -194,10 +181,11 @@ class CIELAB:
                       end=('\n' if i == len(dataset) - 1 else ''),
                       flush=True)
 
+            img = np.moveaxis(img, 0, -1)
             ab_rounded = np.round(img[:, :, 1:].reshape(-1, 2)).astype(int)
             ab_offset = ab_rounded - self.AB_RANGE[0]
 
-            np.add.at(ab_acc, np.split(ab_offset, 2, axis=1), 1)
+            np.add.at(ab_acc, tuple(np.split(ab_offset, 2, axis=1)), 1)
 
         # convert to log scale
         ab_acc[ab_acc == 0] = np.nan
