@@ -26,14 +26,16 @@ if __name__ == '__main__':
     # prepare dataset
     dataloader = config.dataloader_from_config(cfg)
 
+    # create logger
+    logger = config.logger_from_config(cfg)
+
     # create model
     model = config.model_from_config(cfg)
 
-    # create logger
-    if 'log_args' in cfg:
-        logger = config.logger_from_config(cfg)
-    else:
-        logger = None
-
     # run training
-    model.train(dataloader, **cfg['training_args'], logger=logger)
+    if cfg['training_args'].get('resume', False):
+        del cfg['training_args']['resume']
+
+        model.resume_training(dataloader, **cfg['training_args'])
+    else:
+        model.train(dataloader, **cfg['training_args'])
