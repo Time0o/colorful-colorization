@@ -42,7 +42,7 @@ class ColorizationNetwork(nn.Module):
             'conv8', (3, size, 256, 128), strides=[.5, 1, 1], batchnorm=False)
 
         self.classify = nn.Conv2d(in_channels=128,
-                                  out_channels=self.gamut.EXPECTED_SIZE,
+                                  out_channels=self.cielab.gamut.EXPECTED_SIZE,
                                   kernel_size=1)
 
         self._blocks = [
