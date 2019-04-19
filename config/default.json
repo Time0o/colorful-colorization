@@ -36,6 +36,15 @@
             "weight_decay": 1e-3
         }
     },
+    "model_args": {
+        "device": "cuda",
+        "checkpoint_dir": ["path", "../models/default"],
+        "logger": "training_logger"
+    },
+    "training_args": {
+        "iterations": 450000,
+        "epochs_till_checkpoint": 10000
+    },
     "log_args": {
         "version": 1,
         "disable_existing_loggers": false,
@@ -58,19 +67,15 @@
                 "level": "INFO",
                 "formatter": "timestamp",
                 "class": "logging.FileHandler",
-                "filename": ["path", "../log/training.txt"],
+                "filename": ["path", "../log/default.txt"],
                 "mode": "w"
             }
          },
          "loggers": {
-            "config": {
+            "training_logger": {
                 "level": "INFO",
                 "handlers": ["stdout", "file"]
             }
          }
-    },
-    "training_args": {
-        "iterations": 450000,
-        "device": "cuda"
     }
 }
