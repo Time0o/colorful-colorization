@@ -4,8 +4,11 @@
 data/*
 !data/.gitkeep
 
+figures/*
+!figures/.gitkeep
+
 log/*
 !log/.gitkeep
 
-figures/*
-!figures/.gitkeep
+resources/*
+!resources/.gitkeep
