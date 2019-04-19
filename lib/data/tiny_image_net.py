@@ -7,8 +7,6 @@ import numpy as np
 from skimage import color, io, transform
 from torch.utils.data.dataset import Dataset
 
-from cielab import CIELAB
-
 
 class TinyImageNet(Dataset):
     DATASET_TRAIN = 'train'
@@ -155,7 +153,7 @@ class TinyImageNet(Dataset):
         if self.color_space == self.COLOR_SPACE_RGB:
             return self._process_image(image_rgb)
         elif self.color_space == self.COLOR_SPACE_LAB:
-            image_lab = CIELAB.rgb_to_lab(image_rgb)
+            image_lab = color.rgb2lab(image_rgb)
             return self._process_image(image_lab)
 
     def _process_image(self, image):

@@ -144,14 +144,6 @@ class CIELAB:
         # set grid
         ax.grid(color='k', linestyle=':', dashes=(1, 4))
 
-    @staticmethod
-    def rgb_to_lab(img):
-        return color.rgb2lab(img)
-
-    @staticmethod
-    def lab_to_rgb(img):
-        return color.lab2rgb(img)
-
     def plot_ab_gamut(self, l=50, ax=None):
         assert l >= 50 and l <= 100
 
