@@ -11,11 +11,6 @@ from .interpolate import Interpolate
 class ColorizationNetwork(nn.Module):
     KERNEL_SIZE = 3
 
-    BETA1 = .9
-    BETA2 = .99
-    WEIGHT_DECAY = 1e-3
-    LR_INIT = 3e-5
-
     def __init__(self, input_size, cielab):
         super().__init__()
 
@@ -91,68 +86,6 @@ class ColorizationNetwork(nn.Module):
         q_actual = self.encode_ab(ab)
 
         return q_pred, q_actual
-
-    def run_training(self, dataloader, iterations, device=None, verbosity=0):
-        # validate dataset properties
-        dataset = dataloader.dataset
-
-        assert dataset.color_space == dataset.COLOR_SPACE_LAB
-
-        # switch to training mode (essential for batch normalization)
-        was_training = self.training
-
-        if not was_training:
-            self.train()
-
-        # move model to device
-        if device is not None:
-            self.to(device)
-
-        # create optimizer
-        op = optim.Adam(self.parameters(),
-                        lr=self.LR_INIT,
-                        betas=(self.BETA1, self.BETA2),
-                        weight_decay=self.WEIGHT_DECAY)
-
-        # optimization loop
-        criterion = CrossEntropyLoss2d()
-
-        i = 1
-        while i <= iterations:
-            for img in dataloader:
-                # move data to device
-                if device is not None:
-                    img = img.to(device)
-
-                # perform parameter update
-                op.zero_grad()
-
-                q_pred, q_actual = self(img)
-                loss = criterion(q_pred, q_actual)
-                loss.backward()
-
-                op.step()
-
-                if verbosity > 0:
-                    fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
-                    msg = fmt.format(i, iterations, loss)
-
-                    if verbosity == 1:
-                        end = '\n' if i == iterations else ''
-                        msg = '\r' + msg.ljust(50)
-                    elif verbosity > 1:
-                        end = '\n'
-
-                    print(msg, end=end, flush=True)
-
-                i += 1
-
-                if i > iterations:
-                    break
-
-        # reset model mode
-        if not was_training:
-            self.eval()
 
     @classmethod
     def _create_block(cls,
