@@ -144,22 +144,6 @@ def _merge_configs(config: Dict[str, dict],
     return _update_recursive(default_copy, config)
 
 
-def _get_config(path: str, default_path=None) -> Dict[str, dict]:
-    # Load a configuration dictionary from a JSON file, optionally specifying
-    # a path to a default configuration file as well.
-
-    config = _load_config(path)
-
-    if default_path is not None:
-        default = _load_config(default_path)
-        config = _merge_configs(config, default)
-
-    _resolve_paths(config, os.path.dirname(os.path.abspath(path)))
-
-    _apply_hooks(config)
-
-    return config
-
 
 # string to object conversion operations
 
@@ -187,9 +171,21 @@ def _construct_class(config: Dict[str, Union[str, dict]],
 
 # public functions
 
-def dataloader_from_config(path, default_path=None):
-    config = _get_config(path, default_path)
+def get_config(path: str, default_path=None) -> Dict[str, dict]:
+    config = _load_config(path)
 
+    if default_path is not None:
+        default = _load_config(default_path)
+        config = _merge_configs(config, default)
+
+    _resolve_paths(config, os.path.dirname(os.path.abspath(path)))
+
+    _apply_hooks(config)
+
+    return config
+
+
+def dataloader_from_config(config):
     # create dataset
     dataset = _construct_class(config['dataset_args'])
 
@@ -199,9 +195,7 @@ def dataloader_from_config(path, default_path=None):
     return dataloader
 
 
-def model_from_config(path, default_path=None):
-    config = _get_config(path, default_path)
-
+def model_from_config(config):
     # create network
     network = _construct_class(config['network_args'])
 
@@ -215,9 +209,7 @@ def model_from_config(path, default_path=None):
     return Model(network=network, loss=loss, optimizer=optimizer)
 
 
-def logger_from_config(path, default_path=None):
-    config = _get_config(path, default_path)
-
+def logger_from_config(config):
     # configure logger
     logging.config.dictConfig(config['log_args'])
 
