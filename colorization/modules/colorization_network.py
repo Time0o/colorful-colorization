@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 from .cross_entropy_loss_2d import CrossEntropyLoss2d
 from .encode_ab import EncodeAB
@@ -165,10 +163,6 @@ class ColorizationNetwork(nn.Module):
             layer.add_module('batchnorm', bn)
 
         return layer
-
-    @staticmethod
-    def _tensor_GiB(t):
-        return t.element_size() * t.nelement() / 1024**3
 
     @staticmethod
     def _dilation_padding(i, k, s, d):
