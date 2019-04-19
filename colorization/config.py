@@ -206,12 +206,13 @@ def model_from_config(config):
     optimizer = _construct_class(config['optimizer_args'], network.parameters())
 
     # construct model
-    return Model(network=network, loss=loss, optimizer=optimizer)
+    return Model(network=network,
+                 loss=loss,
+                 optimizer=optimizer,
+                 **config['model_args'])
 
 
 def logger_from_config(config):
     # configure logger
-    logging.config.dictConfig(config['log_args'])
-
-    # create logger
-    return logging.getLogger('config')
+    if 'log_args' in config:
+        logging.config.dictConfig(config['log_args'])
