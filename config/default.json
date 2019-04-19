@@ -4,8 +4,7 @@
         "params": {
             "root": ["path", "../data/tiny-image-net"],
             "image_size": 224,
-            "limit": null,
-            "shuffle": false
+            "limit": null
         }
     },
     "dataloader_args": {

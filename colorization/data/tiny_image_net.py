@@ -91,11 +91,6 @@ class TinyImageNet(Dataset):
     def set_limit(self, n):
         self.limit = n
 
-    def shuffle(self):
-        i = np.random.permutation(len(self))
-
-        self._indices[self.dataset] = self._indices[self.dataset][i]
-
     def _build_indices(self):
         self._indices = {}
 
