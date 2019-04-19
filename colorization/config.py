@@ -1,4 +1,6 @@
 import json
+import logging
+import logging.config
 import os
 import sys
 from collections import Mapping, Sequence
@@ -211,3 +213,13 @@ def model_from_config(path, default_path=None):
 
     # construct model
     return Model(network=network, loss=loss, optimizer=optimizer)
+
+
+def logger_from_config(path, default_path=None):
+    config = _get_config(path, default_path)
+
+    # configure logger
+    logging.config.dictConfig(config['log_args'])
+
+    # create logger
+    return logging.getLogger('config')
