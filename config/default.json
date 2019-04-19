@@ -1,0 +1,77 @@
+{
+    "dataset_args": {
+        "type": "colorization.data.tiny_image_net.TinyImageNet",
+        "params": {
+            "root": ["path", "../data/tiny-image-net"],
+            "image_size": 224,
+            "limit": null,
+            "shuffle": false
+        }
+    },
+    "dataloader_args": {
+        "type": "torch.utils.data.DataLoader",
+        "params": {
+            "batch_size": 32,
+            "drop_last": true,
+            "shuffle": true,
+            "num_workers": 32,
+            "pin_memory": true
+        }
+    },
+    "network_args": {
+        "type": "colorization.modules.colorization_network.ColorizationNetwork",
+        "params": {
+            "input_size": 224,
+            "kernel_size": 3,
+            "ab_gamut_file": ["path", "../resources/ab-gamut.npy"]
+        }
+    },
+    "loss_args": {
+        "type": "colorization.modules.cross_entropy_loss_2d.CrossEntropyLoss2d"
+    },
+    "optimizer_args": {
+        "type": "torch.optim.Adam",
+        "params": {
+            "lr": 3e-5,
+            "betas": [0.9, 0.99],
+            "weight_decay": 1e-3
+        }
+    },
+    "log_args": {
+        "version": 1,
+        "disable_existing_loggers": false,
+        "formatters": {
+            "timestamp": {
+                "format": "%(asctime)s - %(name)s (%(levelname)s): %(message)s"
+            },
+            "no_timestamp": {
+                "format": "%(name)s (%(levelname)s): %(message)s"
+            }
+        },
+        "handlers": {
+            "stdout": {
+                "level": "INFO",
+                "formatter": "no_timestamp",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout"
+            },
+            "file": {
+                "level": "INFO",
+                "formatter": "timestamp",
+                "class": "logging.FileHandler",
+                "filename": ["path", "../log/training.txt"],
+                "mode": "w"
+            }
+         },
+         "loggers": {
+            "config": {
+                "level": "INFO",
+                "handlers": ["stdout", "file"]
+            }
+         }
+    },
+    "training_args": {
+        "iterations": 450000,
+        "verbosity": 2
+    }
+}
