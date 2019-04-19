@@ -71,6 +71,6 @@
     },
     "training_args": {
         "iterations": 450000,
-        "device": "gpu"
+        "device": "cuda"
     }
 }
