@@ -9,15 +9,15 @@ from .interpolate import Interpolate
 
 
 class ColorizationNetwork(nn.Module):
-    KERNEL_SIZE = 3
-
-    def __init__(self, input_size, cielab):
+    def __init__(self, input_size, kernel_size, cielab):
         super().__init__()
 
+        self.input_size = input_size
+        self.kernel_size = kernel_size
         self.cielab = cielab
 
         # prediction
-        size = input_size
+        size = self.input_size
 
         self.conv1, size = self._create_block(
             'conv1', (2, size, 1, 64), strides=[1, 2])
@@ -87,8 +87,7 @@ class ColorizationNetwork(nn.Module):
 
         return q_pred, q_actual
 
-    @classmethod
-    def _create_block(cls,
+    def _create_block(self,
                       name,
                       dims,
                       strides,
@@ -101,7 +100,7 @@ class ColorizationNetwork(nn.Module):
         block = nn.Sequential()
 
         for i in range(block_depth):
-            layer = cls._append_layer(
+            layer = self._append_layer(
                 input_size=input_size,
                 input_depth=(input_depth if i == 0 else output_depth),
                 output_depth=output_depth,
@@ -116,8 +115,7 @@ class ColorizationNetwork(nn.Module):
 
         return block, input_size
 
-    @classmethod
-    def _append_layer(cls,
+    def _append_layer(self,
                       input_size,
                       input_depth,
                       output_depth,
@@ -137,18 +135,18 @@ class ColorizationNetwork(nn.Module):
 
         # adjust padding for dilated convolutions
         if dilation > 1:
-            padding = cls._dilation_padding(
+            padding = self._dilation_padding(
                 i=input_size,
-                k=cls.KERNEL_SIZE,
+                k=self.kernel_size,
                 s=stride,
                 d=dilation)
         else:
-            padding = (cls.KERNEL_SIZE - 1) // 2
+            padding = (self.kernel_size - 1) // 2
 
         # convolution
         conv = nn.Conv2d(in_channels=input_depth,
                          out_channels=output_depth,
-                         kernel_size=cls.KERNEL_SIZE,
+                         kernel_size=self.kernel_size,
                          stride=stride,
                          padding=padding,
                          dilation=dilation)
