@@ -4,9 +4,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from cielab import ABGamut
-from encode_ab import EncodeAB
-from interpolate import Interpolate
-from loss import CrossEntropyLoss2d
+from modules.cross_entropy_loss_2d import CrossEntropyLoss2d
+from modules.encode_ab import EncodeAB
+from modules.interpolate import Interpolate
 
 
 class ColorizationNetwork(nn.Module):
