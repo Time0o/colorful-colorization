@@ -13,7 +13,7 @@
             "batch_size": 32,
             "drop_last": true,
             "shuffle": true,
-            "num_workers": 32,
+            "num_workers": 4,
             "pin_memory": true
         }
     },
