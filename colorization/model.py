@@ -101,6 +101,21 @@ class Model:
 
             ep += 1
 
+    def predict(self, img):
+        # switch to evaluation mode
+        self.network.eval()
+
+        # move data to device
+        if self.device is not None:
+            img_device = img.to(self.device)
+
+        # run prediction
+        with torch.no_grad():
+            img_pred_device = self.network(img_device)
+            img_pred = img_pred_device.to(img.device)
+
+        return img_pred
+
     def save(self, path):
         torch.save(self.network.state_dict(), path)
 
@@ -128,28 +143,8 @@ class Model:
             if not os.path.exists(path):
                 raise ValueError("failed to find checkpoint '{}'".format(path))
         else:
-            # create list of all checkpoints
-            checkpoint_template = '{}_*.{}'.format(self.CHECKPOINT_PREFIX,
-                                                   self.CHECKPOINT_POSTFIX)
-
-            checkpoint_template = os.path.join(checkpoint_dir,
-                                               checkpoint_template)
-
-            all_checkpoints = sorted(glob(checkpoint_template))
-
-            if not all_checkpoints:
-                err = "failed to resume training: no previous checkpoints"
-                raise ValueError(err)
-
-            # find lastest checkpoint
-            checkpoint_path = all_checkpoints[-1]
-
-            # deduce checkpoint epoch from filename
-            checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
-
-            m = re.match(checkpoint_regex, checkpoint_path)
-
-            checkpoint_epoch = int(m.group(1))
+            checkpoint_path, checkpoint_epoch = \
+                self.find_latest_checkpoint(checkpoint_dir)
 
         # load checkpoint
         state = torch.load(checkpoint_path)
@@ -163,7 +158,35 @@ class Model:
         # return checkpoint epoch
         return checkpoint_epoch
 
-    def _validate_checkpoint_dir(self, checkpoint_dir, resuming=False):
+    @classmethod
+    def find_latest_checkpoint(cls, checkpoint_dir):
+        # create list of all checkpoints
+        checkpoint_template = '{}_*.{}'.format(cls.CHECKPOINT_PREFIX,
+                                               cls.CHECKPOINT_POSTFIX)
+
+        checkpoint_template = os.path.join(checkpoint_dir,
+                                           checkpoint_template)
+
+        all_checkpoints = sorted(glob(checkpoint_template))
+
+        if not all_checkpoints:
+            err = "failed to resume training: no previous checkpoints"
+            raise ValueError(err)
+
+        # find lastest checkpoint
+        checkpoint_path = all_checkpoints[-1]
+
+        # deduce checkpoint epoch from filename
+        checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
+
+        m = re.match(checkpoint_regex, checkpoint_path)
+
+        checkpoint_epoch = int(m.group(1))
+
+        return checkpoint_path, checkpoint_epoch
+
+    @staticmethod
+    def _validate_checkpoint_dir(checkpoint_dir, resuming=False):
         # check existance
         if not os.path.isdir(checkpoint_dir):
             raise ValueError("checkpoint directory must exist")
@@ -175,10 +198,11 @@ class Model:
             if len([f for f in checkpoint_files if not f.startswith('.')]) > 0:
                 raise ValueError("checkpoint directory must be empty")
 
-    def _checkpoint_path(self, checkpoint_dir, checkpoint_epoch):
+    @classmethod
+    def _checkpoint_path(cls, checkpoint_dir, checkpoint_epoch):
         checkpoint = '{}_{}.{}'.format(
-            self.CHECKPOINT_PREFIX,
-            self.CHECKPOINT_ID_FMT.format(checkpoint_epoch),
-            self.CHECKPOINT_POSTFIX)
+            cls.CHECKPOINT_PREFIX,
+            cls.CHECKPOINT_ID_FMT.format(checkpoint_epoch),
+            cls.CHECKPOINT_POSTFIX)
 
         return os.path.join(checkpoint_dir, checkpoint)
