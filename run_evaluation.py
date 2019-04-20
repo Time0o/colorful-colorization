@@ -7,10 +7,8 @@ from glob import glob
 from skimage import color, io
 from torch.utils.data import DataLoader
 
-import setup_path
-from nice_argparse import nice_help_formatter
-
 import colorization.config as config
+from colorization.util.argparse import nice_help_formatter
 
 
 USAGE = \
