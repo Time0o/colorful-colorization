@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from .cross_entropy_loss_2d import CrossEntropyLoss2d
+from .decode_q import DecodeQ
 from .encode_ab import EncodeAB
 from .interpolate import Interpolate
 
@@ -59,17 +60,22 @@ class ColorizationNetwork(nn.Module):
 
         # label transformation
         self.downsample =  Interpolate(size / input_size)
+        self.upsample =  Interpolate(input_size / size)
 
         self.encode_ab = EncodeAB(self.cielab)
+        self.decode_q = DecodeQ(self.cielab)
 
     def forward(self, img):
-        l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+        if self.training:
+            l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+        else:
+            l = img
 
         # normalize lightness
-        l = (l - self.cielab.L_MEAN) / self.cielab.L_STD
+        l_norm = (l - self.cielab.L_MEAN) / self.cielab.L_STD
 
         # prediction
-        q_pred = l
+        q_pred = l_norm
         for block in self._blocks:
             if self._is_dilating_block(block):
                 torch.backends.cudnn.benchmark = True
@@ -79,11 +85,17 @@ class ColorizationNetwork(nn.Module):
                 q_pred = block(q_pred)
 
         # label transformation
-        ab = self.downsample(ab)
+        if self.training:
+            ab = self.downsample(ab)
 
-        q_actual = self.encode_ab(ab)
+            q_actual = self.encode_ab(ab)
 
-        return q_pred, q_actual
+            return q_pred, q_actual
+        else:
+            q_pred = self.upsample(q_pred)
+            ab_pred = self.decode_q(q_pred)
+
+            return torch.cat((l, ab_pred), dim=1)
 
     def _create_block(self,
                       name,
