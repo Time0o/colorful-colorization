@@ -14,11 +14,9 @@
             "lr": 1e-3
         }
     },
-    "model_args": {
-        "checkpoint_dir": ["path", "../models/overfit_single"]
-    },
     "training_args": {
         "iterations": 100,
+        "checkpoint_dir": ["path", "../models/overfit_single"],
         "epochs_till_checkpoint": 10
     },
     "log_args": {

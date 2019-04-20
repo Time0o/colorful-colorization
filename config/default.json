@@ -38,11 +38,11 @@
     },
     "model_args": {
         "device": "cuda",
-        "checkpoint_dir": ["path", "../models/default"],
         "logger": "training_logger"
     },
     "training_args": {
         "iterations": 450000,
+        "checkpoint_dir": ["path", "../models/default"],
         "epochs_till_checkpoint": 10000
     },
     "log_args": {

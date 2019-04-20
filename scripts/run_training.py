@@ -33,9 +33,13 @@ if __name__ == '__main__':
     model = config.model_from_config(cfg)
 
     # run training
-    if cfg['training_args'].get('resume', False):
-        del cfg['training_args']['resume']
+    if cfg['training_args'].pop('resume', False):
+        checkpoint_epoch = model.restore_training(
+            cfg['training_args']['checkpoint_dir'],
+            cfg['training_args'].pop('checkpoint_epoch', None))
 
-        model.resume_training(dataloader, **cfg['training_args'])
+        model.train(dataloader,
+                    epoch_init=(checkpoint_epoch + 1),
+                    **cfg['training_args'])
     else:
         model.train(dataloader, **cfg['training_args'])
