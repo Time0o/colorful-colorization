@@ -195,15 +195,20 @@ def dataloader_from_config(config):
     return dataloader
 
 
-def model_from_config(config):
+def model_from_config(config, trainable=True):
     # create network
     network = _construct_class(config['network_args'])
 
-    # create loss function
-    loss = _construct_class(config['loss_args'])
+    if trainable:
+        # create loss function
+        loss = _construct_class(config['loss_args'])
 
-    # create optimizer
-    optimizer = _construct_class(config['optimizer_args'], network.parameters())
+        # create optimizer
+        optimizer = _construct_class(config['optimizer_args'],
+                                     network.parameters())
+    else:
+        loss = None
+        optimizer = None
 
     # construct model
     return Model(network=network,
