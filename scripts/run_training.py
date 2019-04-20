@@ -3,19 +3,28 @@
 import argparse
 
 import setup_path
+from nice_argparse import nice_help_formatter
 
 import colorization.config as config
 
 
+USAGE = \
+"""run_training.py [-h|--help]
+                       --config CONFIG
+                       [--default-config CONFIG]"""
+
+
 if __name__ == '__main__':
     # parse command line arguments
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=nice_help_formatter(),
+                                     usage=USAGE)
 
     parser.add_argument('--config',
                         required=True,
                         help="training configuration JSON file")
 
     parser.add_argument('--default-config',
+                        metavar='CONFIG',
                         help="training default configuration JSON file")
 
     args = parser.parse_args()
