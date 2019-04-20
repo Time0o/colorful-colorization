@@ -1,29 +1,22 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
-from cielab import ABGamut
-from encode_ab import EncodeAB
-from interpolate import Interpolate
-from loss import CrossEntropyLoss2d
+from .cross_entropy_loss_2d import CrossEntropyLoss2d
+from .decode_q import DecodeQ
+from .encode_ab import EncodeAB
+from .interpolate import Interpolate
 
 
 class ColorizationNetwork(nn.Module):
-    KERNEL_SIZE = 3
-
-    BETA1 = .9
-    BETA2 = .99
-    WEIGHT_DECAY = 1e-3
-    LR_INIT = 3e-5
-
-    def __init__(self, input_size, cielab):
+    def __init__(self, input_size, kernel_size, cielab):
         super().__init__()
 
+        self.input_size = input_size
+        self.kernel_size = kernel_size
         self.cielab = cielab
 
         # prediction
-        size = input_size
+        size = self.input_size
 
         self.conv1, size = self._create_block(
             'conv1', (2, size, 1, 64), strides=[1, 2])
@@ -50,7 +43,7 @@ class ColorizationNetwork(nn.Module):
             'conv8', (3, size, 256, 128), strides=[.5, 1, 1], batchnorm=False)
 
         self.classify = nn.Conv2d(in_channels=128,
-                                  out_channels=ABGamut.EXPECTED_SIZE,
+                                  out_channels=self.cielab.gamut.EXPECTED_SIZE,
                                   kernel_size=1)
 
         self._blocks = [
@@ -67,17 +60,22 @@ class ColorizationNetwork(nn.Module):
 
         # label transformation
         self.downsample =  Interpolate(size / input_size)
+        self.upsample =  Interpolate(input_size / size)
 
         self.encode_ab = EncodeAB(self.cielab)
+        self.decode_q = DecodeQ(self.cielab)
 
     def forward(self, img):
-        l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+        if self.training:
+            l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+        else:
+            l = img
 
         # normalize lightness
-        l = (l - self.cielab.L_MEAN) / self.cielab.L_STD
+        l_norm = (l - self.cielab.L_MEAN) / self.cielab.L_STD
 
         # prediction
-        q_pred = l
+        q_pred = l_norm
         for block in self._blocks:
             if self._is_dilating_block(block):
                 torch.backends.cudnn.benchmark = True
@@ -87,76 +85,19 @@ class ColorizationNetwork(nn.Module):
                 q_pred = block(q_pred)
 
         # label transformation
-        ab = self.downsample(ab)
+        if self.training:
+            ab = self.downsample(ab)
 
-        q_actual = self.encode_ab(ab)
+            q_actual = self.encode_ab(ab)
 
-        return q_pred, q_actual
+            return q_pred, q_actual
+        else:
+            q_pred = self.upsample(q_pred)
+            ab_pred = self.decode_q(q_pred)
 
-    def run_training(self, dataloader, iterations, device=None, verbosity=0):
-        # validate dataset properties
-        dataset = dataloader.dataset
+            return torch.cat((l, ab_pred), dim=1)
 
-        assert dataset.color_space == dataset.COLOR_SPACE_LAB
-
-        # switch to training mode (essential for batch normalization)
-        was_training = self.training
-
-        if not was_training:
-            self.train()
-
-        # move model to device
-        if device is not None:
-            self.to(device)
-
-        # create optimizer
-        op = optim.Adam(self.parameters(),
-                        lr=self.LR_INIT,
-                        betas=(self.BETA1, self.BETA2),
-                        weight_decay=self.WEIGHT_DECAY)
-
-        # optimization loop
-        criterion = CrossEntropyLoss2d()
-
-        i = 1
-        while i <= iterations:
-            for img in dataloader:
-                # move data to device
-                if device is not None:
-                    img = img.to(device)
-
-                # perform parameter update
-                op.zero_grad()
-
-                q_pred, q_actual = self(img)
-                loss = criterion(q_pred, q_actual)
-                loss.backward()
-
-                op.step()
-
-                if verbosity > 0:
-                    fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
-                    msg = fmt.format(i, iterations, loss)
-
-                    if verbosity == 1:
-                        end = '\n' if i == iterations else ''
-                        msg = '\r' + msg.ljust(50)
-                    elif verbosity > 1:
-                        end = '\n'
-
-                    print(msg, end=end, flush=True)
-
-                i += 1
-
-                if i > iterations:
-                    break
-
-        # reset model mode
-        if not was_training:
-            self.eval()
-
-    @classmethod
-    def _create_block(cls,
+    def _create_block(self,
                       name,
                       dims,
                       strides,
@@ -169,7 +110,7 @@ class ColorizationNetwork(nn.Module):
         block = nn.Sequential()
 
         for i in range(block_depth):
-            layer = cls._append_layer(
+            layer = self._append_layer(
                 input_size=input_size,
                 input_depth=(input_depth if i == 0 else output_depth),
                 output_depth=output_depth,
@@ -184,8 +125,7 @@ class ColorizationNetwork(nn.Module):
 
         return block, input_size
 
-    @classmethod
-    def _append_layer(cls,
+    def _append_layer(self,
                       input_size,
                       input_depth,
                       output_depth,
@@ -205,18 +145,18 @@ class ColorizationNetwork(nn.Module):
 
         # adjust padding for dilated convolutions
         if dilation > 1:
-            padding = cls._dilation_padding(
+            padding = self._dilation_padding(
                 i=input_size,
-                k=cls.KERNEL_SIZE,
+                k=self.kernel_size,
                 s=stride,
                 d=dilation)
         else:
-            padding = (cls.KERNEL_SIZE - 1) // 2
+            padding = (self.kernel_size - 1) // 2
 
         # convolution
         conv = nn.Conv2d(in_channels=input_depth,
                          out_channels=output_depth,
-                         kernel_size=cls.KERNEL_SIZE,
+                         kernel_size=self.kernel_size,
                          stride=stride,
                          padding=padding,
                          dilation=dilation)
@@ -235,10 +175,6 @@ class ColorizationNetwork(nn.Module):
             layer.add_module('batchnorm', bn)
 
         return layer
-
-    @staticmethod
-    def _tensor_GiB(t):
-        return t.element_size() * t.nelement() / 1024**3
 
     @staticmethod
     def _dilation_padding(i, k, s, d):

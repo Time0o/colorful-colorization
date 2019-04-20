@@ -7,8 +7,6 @@ import numpy as np
 from skimage import color, io, transform
 from torch.utils.data.dataset import Dataset
 
-from cielab import CIELAB
-
 
 class TinyImageNet(Dataset):
     DATASET_TRAIN = 'train'
@@ -31,6 +29,7 @@ class TinyImageNet(Dataset):
                  dtype=np.float32,
                  color_space=COLOR_SPACE_LAB,
                  limit=None,
+                 get_paths=False,
                  clean=CLEAN_ASSUME,
                  transform=None):
 
@@ -40,6 +39,7 @@ class TinyImageNet(Dataset):
         self.set_dtype(dtype)
         self.set_color_space(color_space)
         self.set_limit(limit)
+        self.set_get_paths(get_paths)
 
         self._build_indices()
         self._clean(clean)
@@ -93,10 +93,8 @@ class TinyImageNet(Dataset):
     def set_limit(self, n):
         self.limit = n
 
-    def shuffle(self):
-        i = np.random.permutation(len(self))
-
-        self._indices[self.dataset] = self._indices[self.dataset][i]
+    def set_get_paths(self, get_paths):
+        self.get_paths = get_paths
 
     def _build_indices(self):
         self._indices = {}
@@ -153,10 +151,15 @@ class TinyImageNet(Dataset):
                 multichannel=True)
 
         if self.color_space == self.COLOR_SPACE_RGB:
-            return self._process_image(image_rgb)
+            image = self._process_image(image_rgb)
         elif self.color_space == self.COLOR_SPACE_LAB:
-            image_lab = CIELAB.rgb_to_lab(image_rgb)
-            return self._process_image(image_lab)
+            image_lab = color.rgb2lab(image_rgb)
+            image = self._process_image(image_lab)
+
+        if self.get_paths:
+            return image, image_path
+        else:
+            return image
 
     def _process_image(self, image):
         image = image.astype(self.dtype)

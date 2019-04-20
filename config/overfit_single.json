@@ -1,0 +1,29 @@
+{
+    "dataset_args": {
+        "params": {
+            "limit": 1
+        }
+    },
+    "dataloader_args": {
+        "params": {
+            "batch_size": 1
+        }
+    },
+    "optimizer_args": {
+        "params": {
+            "lr": 1e-3
+        }
+    },
+    "training_args": {
+        "iterations": 100,
+        "checkpoint_dir": ["path", "../models/overfit_single"],
+        "epochs_till_checkpoint": 10
+    },
+    "log_args": {
+        "handlers": {
+            "file": {
+                "filename": ["path", "../log/overfit_single.txt"]
+            }
+        }
+    }
+}

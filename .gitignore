@@ -6,3 +6,12 @@ data/*
 
 figures/*
 !figures/.gitkeep
+
+log/*
+!log/.gitkeep
+
+models/*/*
+!models/*/.gitkeep
+
+resources/*
+!resources/.gitkeep
