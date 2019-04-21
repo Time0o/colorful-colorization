@@ -13,7 +13,7 @@ from colorization.test.util import resource_path
 
 _SAMPLE_BATCH_SIZE = 32
 _SAMPLE_HEIGHT = 100
-_SAMPLE_WIDTH = 100
+_SAMPLE_WIDTH = 200
 
 _AB_GAMUT_FILE = resource_path('ab-gamut.npy')
 _AB_SAFE_RANGE = np.arange(0, 80, 10, dtype=np.float32)
@@ -22,6 +22,8 @@ _AB_SAFE_RANGE = np.arange(0, 80, 10, dtype=np.float32)
 class EncodeDecode(unittest.TestCase):
     def test_identity_mapping(self):
         # construct random (valid) ab values
+        np.random.seed(0)
+
         ab_numpy = np.random.choice(
             _AB_SAFE_RANGE,
             size=(_SAMPLE_BATCH_SIZE, 2, _SAMPLE_HEIGHT, _SAMPLE_WIDTH))
