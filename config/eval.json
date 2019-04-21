@@ -23,7 +23,6 @@
         "type": "colorization.modules.colorization_network.ColorizationNetwork",
         "params": {
             "input_size": 224,
-            "kernel_size": 3,
             "ab_gamut_file": ["path", "../resources/ab-gamut.npy"]
         }
     }

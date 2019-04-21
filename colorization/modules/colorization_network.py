@@ -1,3 +1,24 @@
+import os
+
+try:
+    os.environ['GLOG_minloglevel'] = '2'
+
+    import caffe
+
+    _caffe_available = True
+
+    _CAFFE_LAYER_NAME_MAPPING = {
+        'conv1_1': 'bw_conv1_1',
+        'classify': 'conv8_313'
+    }
+
+    _CAFFE_LAYERS_SUPERFLUOUS = {
+        'conv8_313_rh', 'class8_313_rh', 'class8_ab', 'Silence'
+    }
+
+except ImportError:
+    _caffe_available = False
+
 import torch
 import torch.nn as nn
 
@@ -8,11 +29,12 @@ from .interpolate import Interpolate
 
 
 class ColorizationNetwork(nn.Module):
-    def __init__(self, input_size, kernel_size, cielab):
+    DEFAULT_KERNEL_SIZE = 3
+
+    def __init__(self, input_size, cielab):
         super().__init__()
 
         self.input_size = input_size
-        self.kernel_size = kernel_size
         self.cielab = cielab
 
         # prediction
@@ -28,23 +50,34 @@ class ColorizationNetwork(nn.Module):
             'conv3', (3, size, 128, 256), strides=[1, 1, 2])
 
         self.conv4, size = self._create_block(
-            'conv4', (3, size, 256, 512), strides=[1, 1, 1])
+            'conv4', (3, size, 256, 512))
 
         self.conv5, size = self._create_block(
-            'conv5', (3, size, 512, 512), strides=[1, 1, 1], dilation=2)
+            'conv5', (3, size, 512, 512), dilation=2)
 
         self.conv6, size = self._create_block(
-            'conv6', (3, size, 512, 512), strides=[1, 1, 1], dilation=2)
+            'conv6', (3, size, 512, 512), dilation=2)
 
         self.conv7, size = self._create_block(
-            'conv7', (3, size, 512, 256), strides=[1, 1, 1])
+            'conv7', (3, size, 512, 512))
 
         self.conv8, size = self._create_block(
-            'conv8', (3, size, 256, 128), strides=[.5, 1, 1], batchnorm=False)
+            'conv8',
+            (3, size, 512, 256),
+            kernel_sizes=[4, 3, 3],
+            strides=[.5, 1, 1],
+            batchnorm=False
+        )
 
-        self.classify = nn.Conv2d(in_channels=128,
-                                  out_channels=self.cielab.gamut.EXPECTED_SIZE,
-                                  kernel_size=1)
+        classes = self.cielab.gamut.EXPECTED_SIZE
+
+        self.classify, _ = self._create_block(
+            'classify',
+            (1, size, 256, classes),
+            kernel_sizes=[1],
+            strides=[1],
+            batchnorm=False
+        )
 
         self._blocks = [
             self.conv1,
@@ -64,6 +97,80 @@ class ColorizationNetwork(nn.Module):
 
         self.encode_ab = EncodeAB(self.cielab)
         self.decode_q = DecodeQ(self.cielab)
+
+    def init_from_caffe(self, proto, model):
+        if not _caffe_available:
+            raise ValueError("caffe not available, can not read caffe model")
+
+        # read in caffe network
+        caffe_network = caffe.Net(proto, model, caffe.TEST)
+
+        caffe_layers = {}
+
+        for i, l in enumerate(caffe_network.layers[1:], start=1):
+            layer_name = caffe_network._layer_names[i]
+
+            if layer_name.startswith('relu'):
+                continue
+
+            layer_weights = [b.data[...] for b in l.blobs]
+
+            caffe_layers[layer_name] = layer_weights
+
+        caffe_layers_unused = set(caffe_layers)
+
+        # create pytorch state dict from pretrained caffe weights
+        state_dict = {}
+
+        for param in self.state_dict():
+            layer, layer_type, param_type = param.split('.', 1)[1].split('.')
+
+            layer = _CAFFE_LAYER_NAME_MAPPING.get(layer, layer)
+
+            if layer_type == 'conv':
+                if param_type == 'weight':
+                    state_dict[param] = caffe_layers[layer][0]
+                elif param_type == 'bias':
+                    state_dict[param] = caffe_layers[layer][1]
+                else:
+                    assert False
+
+                if layer in caffe_layers_unused:
+                    caffe_layers_unused.remove(layer)
+
+            elif layer_type == 'batchnorm':
+                layer_ = layer + 'norm'
+
+                if param_type == 'weight':
+                    state_dict[param] = caffe_layers[layer_][0]
+                elif param_type == 'bias':
+                    state_dict[param] = caffe_layers[layer_][1]
+                elif param_type == 'running_mean':
+                    state_dict[param] = caffe_network.params[layer_][0].data
+                elif param_type == 'running_var':
+                    state_dict[param] = caffe_network.params[layer_][1].data
+                elif param_type == 'num_batches_tracked':
+                    state_dict[param] = caffe_network.params[layer_][2].data
+                else:
+                    assert False
+
+                if layer_ in caffe_layers_unused:
+                    caffe_layers_unused.remove(layer_)
+
+            else:
+                raise ValueError("unhandled layer type '{}'".format(layer_type))
+
+        # assert that no caffe parameter remain unused
+        caffe_layers_unused -= _CAFFE_LAYERS_SUPERFLUOUS
+
+        if caffe_layers_unused:
+            fmt = "unused caffe layers: {}"
+            raise ValueError(fmt.format(', '.join(sorted(caffe_layers_unused))))
+
+        # load state dict
+        self.load_state_dict({
+            k: torch.from_numpy(v) for k, v in state_dict.items()
+        })
 
     def forward(self, img):
         if self.training:
@@ -100,11 +207,20 @@ class ColorizationNetwork(nn.Module):
     def _create_block(self,
                       name,
                       dims,
-                      strides,
+                      kernel_sizes=None,
+                      strides=None,
                       dilation=1,
                       batchnorm=True):
 
+        # block dimensions
         block_depth, input_size, input_depth, output_depth = dims
+
+        # default kernel sizes and strides
+        if strides is None:
+            strides = [1] * block_depth
+
+        if kernel_sizes is None:
+            kernel_sizes = [self.DEFAULT_KERNEL_SIZE] * block_depth
 
         # chain layers
         block = nn.Sequential()
@@ -114,11 +230,17 @@ class ColorizationNetwork(nn.Module):
                 input_size=input_size,
                 input_depth=(input_depth if i == 0 else output_depth),
                 output_depth=output_depth,
+                kernel_size=kernel_sizes[i],
                 stride=strides[i],
                 dilation=dilation,
                 batchnorm=(batchnorm and i == block_depth - 1))
 
-            block.add_module('{}_{}'.format(name, i + 1), layer)
+            if block_depth == 1:
+                layer_name = name
+            else:
+                layer_name = '{}_{}'.format(name, i + 1)
+
+            block.add_module(layer_name, layer)
 
             # update input size based on stride
             input_size /= strides[i]
@@ -129,37 +251,37 @@ class ColorizationNetwork(nn.Module):
                       input_size,
                       input_depth,
                       output_depth,
-                      stride=1,
-                      dilation=1,
-                      batchnorm=False):
+                      kernel_size,
+                      stride,
+                      dilation,
+                      batchnorm):
 
         layer = nn.Sequential()
 
-        # upsampling
-        if stride < 1:
-            upsample = Interpolate(1 / stride)
-
-            layer.add_module('upsample', upsample)
-
-            stride = 1
-
-        # adjust padding for dilated convolutions
-        if dilation > 1:
-            padding = self._dilation_padding(
-                i=input_size,
-                k=self.kernel_size,
-                s=stride,
-                d=dilation)
-        else:
-            padding = (self.kernel_size - 1) // 2
-
         # convolution
-        conv = nn.Conv2d(in_channels=input_depth,
-                         out_channels=output_depth,
-                         kernel_size=self.kernel_size,
-                         stride=stride,
-                         padding=padding,
-                         dilation=dilation)
+        if stride < 1:
+            conv = nn.ConvTranspose2d(in_channels=input_depth,
+                                      out_channels=output_depth,
+                                      kernel_size=kernel_size,
+                                      stride=int(1 / stride),
+                                      padding=(kernel_size - 1) // 2)
+        else:
+            # adjust padding for dilated convolutions
+            if dilation > 1:
+                padding = self._dilation_padding(
+                    i=input_size,
+                    k=kernel_size,
+                    s=stride,
+                    d=dilation)
+            else:
+                padding = (kernel_size - 1) // 2
+
+            conv = nn.Conv2d(in_channels=input_depth,
+                             out_channels=output_depth,
+                             kernel_size=kernel_size,
+                             stride=stride,
+                             padding=padding,
+                             dilation=dilation)
 
         layer.add_module('conv', conv)
 
