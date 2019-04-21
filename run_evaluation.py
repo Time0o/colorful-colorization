@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import warnings
 from glob import glob
 
 from skimage import color, io
@@ -87,4 +88,6 @@ if __name__ == '__main__':
 
             out_path = os.path.join(args.output_dir, os.path.basename(path))
 
-            io.imsave(out_path, img_pred_rgb)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                io.imsave(out_path, img_pred_rgb)
