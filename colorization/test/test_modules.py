@@ -59,12 +59,14 @@ class CrossEntropyLoss2dCase(unittest.TestCase):
     def test_zero_loss(self):
         # construct random (valid) ab values
         ab = _random_ab()
-        q = _encode_ab(ab)
 
+        # scale q so that softmax will return one hot values
+        q = _encode_ab(ab) * 1000
+
+        # check if loss is zero
         loss = CrossEntropyLoss2d()(q, q)
 
-        self.assertEqual(0, loss)
-
+        self.assertEqual(0, loss, msg="cross entropy loss returns zero")
 
 if __name__ == '__main__':
     unittest.main()
