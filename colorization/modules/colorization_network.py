@@ -76,7 +76,8 @@ class ColorizationNetwork(nn.Module):
             (1, size, 256, classes),
             kernel_sizes=[1],
             strides=[1],
-            batchnorm=False
+            batchnorm=False,
+            activations=False
         )
 
         self._blocks = [
@@ -218,7 +219,8 @@ class ColorizationNetwork(nn.Module):
                       kernel_sizes=None,
                       strides=None,
                       dilation=1,
-                      batchnorm=True):
+                      batchnorm=True,
+                      activations=True):
 
         # block dimensions
         block_depth, input_size, input_depth, output_depth = dims
@@ -241,7 +243,8 @@ class ColorizationNetwork(nn.Module):
                 kernel_size=kernel_sizes[i],
                 stride=strides[i],
                 dilation=dilation,
-                batchnorm=(batchnorm and i == block_depth - 1))
+                batchnorm=(batchnorm and i == block_depth - 1),
+                activation=activations)
 
             if block_depth == 1:
                 layer_name = name
@@ -262,7 +265,8 @@ class ColorizationNetwork(nn.Module):
                       kernel_size,
                       stride,
                       dilation,
-                      batchnorm):
+                      batchnorm,
+                      activation):
 
         layer = nn.Sequential()
 
@@ -294,9 +298,10 @@ class ColorizationNetwork(nn.Module):
         layer.add_module('conv', conv)
 
         # activation
-        relu = nn.ReLU(inplace=True)
+        if activation:
+            relu = nn.ReLU(inplace=True)
 
-        layer.add_module('relu', relu)
+            layer.add_module('relu', relu)
 
         # batch normalization
         if batchnorm:
