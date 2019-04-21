@@ -68,7 +68,9 @@ class Model:
             i = len(dataloader) * (epoch_init - 1) + 1
             ep = epoch_init
 
-        while i <= iterations:
+
+        done = False
+        while not done:
             for img in dataloader:
                 # move data to device
                 if self.device is not None:
@@ -93,13 +95,20 @@ class Model:
                 i += 1
 
                 if i > iterations:
+                    done = True
                     break
 
             # periodically save checkpoint
-            if checkpoint_dir is not None and ep % epochs_till_checkpoint == 0:
-                self.checkpoint_training(checkpoint_dir, ep)
+            if not done:
+                if checkpoint_dir is not None:
+                    if ep % epochs_till_checkpoint == 0:
+                        self.checkpoint_training(checkpoint_dir, ep)
 
-            ep += 1
+                ep += 1
+
+        # save final checkpoint
+        if checkpoint_dir is not None:
+            self.checkpoint_training(checkpoint_dir, 'final')
 
     def predict(self, img):
         # switch to evaluation mode
@@ -143,8 +152,10 @@ class Model:
             if not os.path.exists(path):
                 raise ValueError("failed to find checkpoint '{}'".format(path))
         else:
+            # skip the final checkpoint here because it might not correspond to
+            # the end of an epoch
             checkpoint_path, checkpoint_epoch = \
-                self.find_latest_checkpoint(checkpoint_dir)
+                self.find_latest_checkpoint(checkpoint_dir, skip_final=True)
 
         # load checkpoint
         state = torch.load(checkpoint_path)
@@ -159,7 +170,7 @@ class Model:
         return checkpoint_epoch
 
     @classmethod
-    def find_latest_checkpoint(cls, checkpoint_dir):
+    def find_latest_checkpoint(cls, checkpoint_dir, skip_final=False):
         # create list of all checkpoints
         checkpoint_template = '{}_*.{}'.format(cls.CHECKPOINT_PREFIX,
                                                cls.CHECKPOINT_POSTFIX)
@@ -169,21 +180,32 @@ class Model:
 
         all_checkpoints = sorted(glob(checkpoint_template))
 
-        if not all_checkpoints:
-            err = "failed to resume training: no previous checkpoints"
-            raise ValueError(err)
-
         # find lastest checkpoint
-        checkpoint_path = all_checkpoints[-1]
+        while True:
+            if not all_checkpoints:
+                err = "failed to resume training: no previous checkpoints"
+                raise ValueError(err)
+
+            checkpoint_path = all_checkpoints[-1]
+
+            is_final = checkpoint_path.find('final') != -1
+
+            if is_final and skip_final:
+                all_checkpoints.pop()
+            else:
+                break
 
         # deduce checkpoint epoch from filename
-        checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
+        if is_final:
+            return checkpoint_path, 'final'
+        else:
+            checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
 
-        m = re.match(checkpoint_regex, checkpoint_path)
+            m = re.match(checkpoint_regex, checkpoint_path)
 
-        checkpoint_epoch = int(m.group(1))
+            checkpoint_epoch = int(m.group(1))
 
-        return checkpoint_path, checkpoint_epoch
+            return checkpoint_path, checkpoint_epoch
 
     @staticmethod
     def _validate_checkpoint_dir(checkpoint_dir, resuming=False):
@@ -200,9 +222,13 @@ class Model:
 
     @classmethod
     def _checkpoint_path(cls, checkpoint_dir, checkpoint_epoch):
-        checkpoint = '{}_{}.{}'.format(
-            cls.CHECKPOINT_PREFIX,
-            cls.CHECKPOINT_ID_FMT.format(checkpoint_epoch),
-            cls.CHECKPOINT_POSTFIX)
+        if checkpoint_epoch == 'final':
+            checkpoint_id = 'final'
+        else:
+            checkpoint_id = cls.CHECKPOINT_ID_FMT.format(checkpoint_epoch)
+
+        checkpoint = '{}_{}.{}'.format(cls.CHECKPOINT_PREFIX,
+                                       checkpoint_id,
+                                       cls.CHECKPOINT_POSTFIX)
 
         return os.path.join(checkpoint_dir, checkpoint)
