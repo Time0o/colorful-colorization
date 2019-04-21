@@ -32,6 +32,10 @@ if __name__ == '__main__':
                         required=True,
                         help="evaluation configuration JSON file")
 
+    parser.add_argument('--default-config',
+                        metavar='CONFIG',
+                        help="evaluation default configuration JSON file")
+
     parser.add_argument('--output-dir',
                         metavar='DIR',
                         required=True,
@@ -53,7 +57,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # load configuration file(s)
-    cfg = config.get_config(args.config)
+    cfg = config.get_config(args.config, args.default_config)
 
     # create model
     model = config.model_from_config(cfg, trainable=False)
