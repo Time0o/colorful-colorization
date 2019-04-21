@@ -2,7 +2,7 @@
 
 import unittest
 
-from colorization.test import test_encode_ab
+from colorization.test import test_modules
 
 
-unittest.main(test_encode_ab)
+unittest.main(test_modules)
