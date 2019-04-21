@@ -62,17 +62,18 @@ if __name__ == '__main__':
     # create model
     model = config.model_from_config(cfg, trainable=False)
 
-    if args.checkpoint is None:
-        if args.checkpoint_dir is None:
-            err = "either checkpoint path or directory must be given"
-            raise ValueError(err)
+    if not model.network.pretrained:
+        if args.checkpoint is None:
+            if args.checkpoint_dir is None:
+                err = "either checkpoint path or directory must be given"
+                raise ValueError(err)
 
-        checkpoint_path, _ = model.find_latest_checkpoint(
-            args.checkpoint_dir)
-    else:
-        checkpoint_path = args.checkpoint_path
+            checkpoint_path, _ = model.find_latest_checkpoint(
+                args.checkpoint_dir)
+        else:
+            checkpoint_path = args.checkpoint_path
 
-    model.load(checkpoint_path)
+        model.load(checkpoint_path)
 
     # run prediction
     dataloader = config.dataloader_from_config(cfg)
