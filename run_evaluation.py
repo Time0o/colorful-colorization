@@ -16,9 +16,9 @@ USAGE = \
 """run_evaluation.py [-h|--help]
                          --config CONFIG
                          --output-dir DIR
+                         [--default-config CONFIG]
                          [--checkpoint CHECKPOINT]
-                         [--checkpoint-dir DIR]
-                         [--batch-size BATCH_SIZE]"""
+                         [--checkpoint-dir DIR]"""
 
 
 if __name__ == '__main__':
