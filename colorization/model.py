@@ -71,7 +71,7 @@ class Model:
 
         done = False
         while not done:
-            for img in dataloader:
+            for img, _ in dataloader:
                 # move data to device
                 if self.device is not None:
                     img = img.to(self.device)

@@ -14,9 +14,7 @@ class TinyImageNet(Dataset):
     DATASET_TEST = 'test'
 
     IMAGE_SIZE_ACTUAL = 64
-
-    COLOR_SPACE_RGB = 'rgb'
-    COLOR_SPACE_LAB = 'lab'
+    IMAGE_DTYPE = np.float32
 
     CLEAN_ASSUME = 'assume'
     CLEAN_SKIP = 'skip'
@@ -26,20 +24,16 @@ class TinyImageNet(Dataset):
                  root,
                  dataset=DATASET_TRAIN,
                  image_size=IMAGE_SIZE_ACTUAL,
-                 dtype=np.float32,
-                 color_space=COLOR_SPACE_LAB,
+                 image_dtype=np.float32,
                  limit=None,
-                 get_paths=False,
                  clean=CLEAN_ASSUME,
                  transform=None):
 
-        self.set_root(root)
-        self.set_dataset(dataset)
-        self.set_image_size(image_size)
-        self.set_dtype(dtype)
-        self.set_color_space(color_space)
-        self.set_limit(limit)
-        self.set_get_paths(get_paths)
+        self.root = root
+        self.dataset = dataset
+        self.image_size = image_size
+        self.image_dtype = image_dtype
+        self.limit = limit
 
         self._build_indices()
         self._clean(clean)
@@ -60,41 +54,41 @@ class TinyImageNet(Dataset):
         else:
             return min(self.limit, l)
 
-    def set_root(self, root):
+    @property
+    def root(self):
+        return self._root
+
+    @root.setter
+    def root(self, root):
         if not os.path.isdir(root):
             fmt = "not a directory: '{}'"
             raise ValueError(fmt.format(root))
 
-        self.root = root
+        self._root = root
 
-    def set_dataset(self, dataset):
+    @property
+    def dataset(self):
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset):
         valid = [self.DATASET_TRAIN, self.DATASET_VAL, self.DATASET_TEST]
 
         if dataset not in valid:
             fmt = "dataset must be either of {}"
             raise ValueError(fmt.format(', '.join(valid)))
 
-        self.dataset = dataset
+        self._dataset = dataset
 
-    def set_image_size(self, image_size):
+    @property
+    def image_size(self):
+        return self._image_size
+
+    @image_size.setter
+    def image_size(self, image_size):
         assert image_size >= self.IMAGE_SIZE_ACTUAL
 
-        self.image_size = image_size
-
-    def set_dtype(self, dtype):
-        self.dtype = dtype
-
-    def set_color_space(self, color_space):
-        if color_space not in [self.COLOR_SPACE_RGB, self.COLOR_SPACE_LAB]:
-            raise ValueError("invalid color space")
-
-        self.color_space = color_space
-
-    def set_limit(self, n):
-        self.limit = n
-
-    def set_get_paths(self, get_paths):
-        self.get_paths = get_paths
+        self._image_size = image_size
 
     def _build_indices(self):
         self._indices = {}
@@ -150,19 +144,12 @@ class TinyImageNet(Dataset):
                 upscale=(self.image_size / self.IMAGE_SIZE_ACTUAL),
                 multichannel=True)
 
-        if self.color_space == self.COLOR_SPACE_RGB:
-            image = self._process_image(image_rgb)
-        elif self.color_space == self.COLOR_SPACE_LAB:
-            image_lab = color.rgb2lab(image_rgb)
-            image = self._process_image(image_lab)
+        image_lab = self._process_image(color.rgb2lab(image_rgb))
 
-        if self.get_paths:
-            return image, image_path
-        else:
-            return image
+        return image_lab, image_path
 
     def _process_image(self, image):
-        image = image.astype(self.dtype)
+        image = image.astype(self.image_dtype)
 
         return np.moveaxis(image, -1, 0)
 
