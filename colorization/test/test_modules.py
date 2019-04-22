@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import torch
 
-from colorization.cielab import ABGamut, CIELAB
+from colorization.cielab import DEFAULT_CIELAB
 from colorization.modules.cross_entropy_loss_2d import CrossEntropyLoss2d
 from colorization.modules.decode_q import DecodeQ
 from colorization.modules.encode_ab import EncodeAB
@@ -16,11 +16,8 @@ _SAMPLE_BATCH_SIZE = 32
 _SAMPLE_HEIGHT = 100
 _SAMPLE_WIDTH = 200
 
-_AB_GAMUT_FILE = resource_path('ab-gamut.npy')
-_AB_GAMUT = ABGamut.from_file(_AB_GAMUT_FILE)
-_CIELAB = CIELAB(gamut=_AB_GAMUT)
-_ENCODE = EncodeAB(_CIELAB)
-_DECODE = DecodeQ(_CIELAB)
+_ENCODE = EncodeAB(DEFAULT_CIELAB)
+_DECODE = DecodeQ(DEFAULT_CIELAB)
 
 _AB_SAFE_RANGE = np.arange(0, 80, 10, dtype=np.float32)
 
