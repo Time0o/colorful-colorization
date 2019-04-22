@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import warnings
 from glob import glob
 
 from skimage import color, io
@@ -62,17 +63,18 @@ if __name__ == '__main__':
     # create model
     model = config.model_from_config(cfg, trainable=False)
 
-    if args.checkpoint is None:
-        if args.checkpoint_dir is None:
-            err = "either checkpoint path or directory must be given"
-            raise ValueError(err)
+    if not model.network.pretrained:
+        if args.checkpoint is None:
+            if args.checkpoint_dir is None:
+                err = "either checkpoint path or directory must be given"
+                raise ValueError(err)
 
-        checkpoint_path, _ = model.find_latest_checkpoint(
-            args.checkpoint_dir)
-    else:
-        checkpoint_path = args.checkpoint_path
+            checkpoint_path, _ = model.find_latest_checkpoint(
+                args.checkpoint_dir)
+        else:
+            checkpoint_path = args.checkpoint_path
 
-    model.load(checkpoint_path)
+        model.load(checkpoint_path)
 
     # run prediction
     dataloader = config.dataloader_from_config(cfg)
@@ -86,4 +88,6 @@ if __name__ == '__main__':
 
             out_path = os.path.join(args.output_dir, os.path.basename(path))
 
-            io.imsave(out_path, img_pred_rgb)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                io.imsave(out_path, img_pred_rgb)
