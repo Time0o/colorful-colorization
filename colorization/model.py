@@ -15,9 +15,9 @@ class Model:
 
     def __init__(self,
                  network,
-                 loss,
-                 optimizer,
-                 device=None,
+                 loss=None,
+                 optimizer=None,
+                 device='cuda',
                  logger=None):
 
         self.network = network

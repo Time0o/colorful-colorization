@@ -1,8 +1,0 @@
-{
-    "model_args": {
-        "device": "cuda"
-    },
-    "network_args": {
-        "type": "colorization.modules.colorization_network.ColorizationNetwork"
-    }
-}

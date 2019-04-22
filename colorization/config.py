@@ -7,7 +7,6 @@ from collections import Mapping, Sequence
 from importlib import import_module
 from typing import Dict, Generator, Tuple, Union
 
-from .cielab import ABGamut, CIELAB
 from .model import Model
 
 

@@ -31,8 +31,7 @@ You can run predictions using either the model you trained yourself or a model
 initialized from a pretrained Caffe model. For the latter you can run:
 
 ```
-./run_evaluation.py --config config/eval.json \
-                    --pretrain-proto resources/colorization_deploy_v2.prototxt \
+./run_evaluation.py --pretrain-proto resources/colorization_deploy_v2.prototxt \
                     --pretrain-model resources/colorization_release_v2.caffemodel \
                     --input-image SOME_IMAGE
                     --output-image SOME_PATH

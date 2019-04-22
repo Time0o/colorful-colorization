@@ -10,12 +10,13 @@ from torch.utils.data import DataLoader
 
 import colorization.config as config
 from colorization.data.image_file_or_directory import ImageFileOrDirectory
+from colorization.model import Model
+from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
 
 
 USAGE = \
 """run_evaluation.py [-h|--help]
-                         --config CONFIG
                          [--input-image IMAGE]
                          [--output-image IMAGE]
                          [--input-dir DIR]
@@ -33,10 +34,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(formatter_class=nice_help_formatter(),
                                      usage=USAGE)
-
-    parser.add_argument('--config',
-                        required=True,
-                        help="evaluation configuration JSON file")
 
     parser.add_argument('--input-image',
                         metavar='IMAGE',
@@ -102,11 +99,8 @@ if __name__ == '__main__':
 
     dataloader = DataLoader(dataset)
 
-    # load configuration file(s)
-    cfg = config.get_config(args.config)
-
     # create model
-    model = config.model_from_config(cfg, trainable=False)
+    model = Model(ColorizationNetwork())
 
     # load pretrained weights
     if (args.pretrain_proto is None) != (args.pretrain_model is None):
