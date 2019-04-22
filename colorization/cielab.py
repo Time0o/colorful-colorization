@@ -3,8 +3,6 @@ from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.spatial import ConvexHull
-from shapely.geometry import Point, Polygon
 from skimage import color
 
 
@@ -13,10 +11,6 @@ class ABGamut:
 
     def __init__(self, points=None):
         self.points = points
-
-    @classmethod
-    def auto(cls):
-        return cls()
 
     @classmethod
     def from_file(cls, file):
@@ -41,7 +35,7 @@ class CIELAB:
     L_STD = 50
     Q_DTYPE = np.int64
 
-    def __init__(self, gamut=ABGamut.auto()):
+    def __init__(self, gamut):
         self.gamut = gamut
 
         a, b, self.ab = self._get_ab()
@@ -67,35 +61,11 @@ class CIELAB:
     def _get_ab_gamut_mask(cls, a, b, ab, gamut):
         ab_gamut_mask = np.full(ab.shape[:-1], False, dtype=bool)
 
-        if gamut.points is not None:
-            a = np.digitize(gamut.points[:, 0], a) - 1
-            b = np.digitize(gamut.points[:, 1], b) - 1
+        a = np.digitize(gamut.points[:, 0], a) - 1
+        b = np.digitize(gamut.points[:, 1], b) - 1
 
-            for a_, b_ in zip(a, b):
-                ab_gamut_mask[a_, b_] = True
-        else:
-            # construct array of all points in discretized RGB space
-            rgb_range = np.linspace(*cls.RGB_RANGE, dtype=cls.RGB_DTYPE)
-
-            _rgb_space = np.meshgrid(rgb_range, rgb_range, rgb_range)
-            rgb_space = np.stack(_rgb_space, -1).reshape(-1, 3)
-
-            # convert points into Lab space
-            ab_gamut = np.squeeze(color.rgb2lab(rgb_space[np.newaxis]))[:, 1:]
-
-            # find convex hull polygon of the resulting gamut
-            ab_gamut_hull = ConvexHull(ab_gamut)
-            ab_gamut_poly = Polygon(ab_gamut[ab_gamut_hull.vertices, :])
-
-            # use polygon to construct "in-gamut" mask for discretized ab space
-            for a in range(ab.shape[0]):
-                for b in range(ab.shape[1]):
-                    for offs_a, offs_b in product([0, cls.AB_BINSIZE],
-                                                  [0, cls.AB_BINSIZE]):
-                        a_, b_ = ab[a, b]
-
-                        if ab_gamut_poly.contains(Point(a_ + offs_a, b_ + offs_b)):
-                            ab_gamut_mask[a, b] = True
+        for a_, b_ in zip(a, b):
+            ab_gamut_mask[a_, b_] = True
 
         return ab_gamut_mask
 
