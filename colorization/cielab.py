@@ -207,3 +207,6 @@ class CIELAB:
 
         # display distribution
         self._plot_ab_matrix(ab_acc_log, ax=ax, title=r"$log(P(a, b))$")
+
+
+DEFAULT_CIELAB = CIELAB()
