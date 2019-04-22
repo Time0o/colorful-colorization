@@ -14,4 +14,4 @@ models/*/*
 !models/*/.gitkeep
 
 resources/*
-!resources/.gitkeep
+!resources/get_resources.sh
