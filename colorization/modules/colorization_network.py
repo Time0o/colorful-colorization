@@ -31,7 +31,7 @@ from .interpolate import Interpolate
 class ColorizationNetwork(nn.Module):
     DEFAULT_KERNEL_SIZE = 3
 
-    def __init__(self, input_size, cielab, init_proto=None, init_model=None):
+    def __init__(self, input_size, cielab):
         super().__init__()
 
         self.input_size = input_size
@@ -99,15 +99,7 @@ class ColorizationNetwork(nn.Module):
         self.encode_ab = EncodeAB(self.cielab)
         self.decode_q = DecodeQ(self.cielab)
 
-        # initialization from pretrained model
-        if init_proto is not None and init_model is not None:
-            self._init_from_caffe(init_proto, init_model)
-
-            self.pretrained = True
-        else:
-            self.pretrained = False
-
-    def _init_from_caffe(self, proto, model):
+    def init_from_caffe(self, proto, model):
         if not _caffe_available:
             raise ValueError("caffe not available, can not read caffe model")
 
