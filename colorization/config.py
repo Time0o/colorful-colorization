@@ -97,16 +97,8 @@ def _apply_hooks(config: Dict[str, dict]) -> None:
     # to predefined rules. This way the configuration file can be a simple JSON
     # file instead of a Python snippet.
 
-    def construct_cielab(path):
-        if path is None:
-            cielab = CIELAB()
-        else:
-            cielab = CIELAB(ABGamut.from_file(path))
-
-        return 'cielab', cielab
-
     HOOKS = {
-        ('network_args', 'params', 'ab_gamut_file'): construct_cielab
+        # TODO
     }
 
     for val_path, val in _recurse_dictionary(config):

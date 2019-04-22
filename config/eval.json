@@ -3,9 +3,6 @@
         "device": "cuda"
     },
     "network_args": {
-        "type": "colorization.modules.colorization_network.ColorizationNetwork",
-        "params": {
-            "ab_gamut_file": ["path", "../resources/ab-gamut.npy"]
-        }
+        "type": "colorization.modules.colorization_network.ColorizationNetwork"
     }
 }

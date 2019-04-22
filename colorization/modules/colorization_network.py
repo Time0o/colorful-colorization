@@ -22,6 +22,7 @@ except ImportError:
 import torch
 import torch.nn as nn
 
+from ..cielab import CIELAB
 from .conv2d_pad_same import Conv2dPadSame
 from .cross_entropy_loss_2d import CrossEntropyLoss2d
 from .decode_q import DecodeQ
@@ -32,10 +33,10 @@ from .interpolate import Interpolate
 class ColorizationNetwork(nn.Module):
     DEFAULT_KERNEL_SIZE = 3
 
-    def __init__(self, cielab):
+    def __init__(self, cielab=None):
         super().__init__()
 
-        self.cielab = cielab
+        self.cielab = cielab if cielab is not None else CIELAB()
 
         # prediction
         self.conv1 = self._create_block('conv1', (2, 1, 64), strides=[1, 2])

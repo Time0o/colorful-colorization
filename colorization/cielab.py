@@ -1,3 +1,4 @@
+import os
 from functools import partial
 from itertools import product
 
@@ -5,21 +6,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skimage import color
 
+from .resources import get_resource_path
+
 
 class ABGamut:
+    DEFAULT_RESOURCE = get_resource_path('ab-gamut.npy')
+
     EXPECTED_SIZE = 313
 
     def __init__(self, points=None):
-        self.points = points
+        if points is not None:
+            self.points = points
+        else:
+            self.points = self.points_from_file(self.DEFAULT_RESOURCE)
 
     @classmethod
-    def from_file(cls, file):
-        points = np.load(file)
+    def points_from_file(cls, path):
+        points = np.load(path)
 
         assert points.shape[0] == cls.EXPECTED_SIZE
         assert points.shape[1] == 2
 
-        return cls(points=points)
+        return points
 
 
 class CIELAB:
@@ -35,8 +43,8 @@ class CIELAB:
     L_STD = 50
     Q_DTYPE = np.int64
 
-    def __init__(self, gamut):
-        self.gamut = gamut
+    def __init__(self, gamut=None):
+        self.gamut = gamut if gamut is not None else ABGamut()
 
         a, b, self.ab = self._get_ab()
 
