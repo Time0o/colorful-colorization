@@ -22,6 +22,7 @@ except ImportError:
 import torch
 import torch.nn as nn
 
+from .conv2d_pad_same import Conv2dPadSame
 from .cross_entropy_loss_2d import CrossEntropyLoss2d
 from .decode_q import DecodeQ
 from .encode_ab import EncodeAB
@@ -31,49 +32,31 @@ from .interpolate import Interpolate
 class ColorizationNetwork(nn.Module):
     DEFAULT_KERNEL_SIZE = 3
 
-    def __init__(self, input_size, cielab):
+    def __init__(self, cielab):
         super().__init__()
 
-        self.input_size = input_size
         self.cielab = cielab
 
         # prediction
-        size = self.input_size
+        self.conv1 = self._create_block('conv1', (2, 1, 64), strides=[1, 2])
+        self.conv2 = self._create_block('conv2', (2, 64, 128), strides=[1, 2])
+        self.conv3 = self._create_block('conv3', (3, 128, 256), strides=[1, 1, 2])
+        self.conv4 = self._create_block('conv4', (3, 256, 512))
+        self.conv5 = self._create_block('conv5', (3, 512, 512), dilation=2)
+        self.conv6 = self._create_block('conv6', (3, 512, 512), dilation=2)
+        self.conv7 = self._create_block('conv7', (3, 512, 512))
 
-        self.conv1, size = self._create_block(
-            'conv1', (2, size, 1, 64), strides=[1, 2])
-
-        self.conv2, size = self._create_block(
-            'conv2', (2, size, 64, 128), strides=[1, 2])
-
-        self.conv3, size = self._create_block(
-            'conv3', (3, size, 128, 256), strides=[1, 1, 2])
-
-        self.conv4, size = self._create_block(
-            'conv4', (3, size, 256, 512))
-
-        self.conv5, size = self._create_block(
-            'conv5', (3, size, 512, 512), dilation=2)
-
-        self.conv6, size = self._create_block(
-            'conv6', (3, size, 512, 512), dilation=2)
-
-        self.conv7, size = self._create_block(
-            'conv7', (3, size, 512, 512))
-
-        self.conv8, size = self._create_block(
+        self.conv8 = self._create_block(
             'conv8',
-            (3, size, 512, 256),
+            (3, 512, 256),
             kernel_sizes=[4, 3, 3],
             strides=[.5, 1, 1],
             batchnorm=False
         )
 
-        classes = self.cielab.gamut.EXPECTED_SIZE
-
-        self.classify, _ = self._create_block(
+        self.classify = self._create_block(
             'classify',
-            (1, size, 256, classes),
+            (1, 256, self.cielab.gamut.EXPECTED_SIZE),
             kernel_sizes=[1],
             strides=[1],
             batchnorm=False,
@@ -93,8 +76,8 @@ class ColorizationNetwork(nn.Module):
         ]
 
         # label transformation
-        self.downsample =  Interpolate(size / input_size)
-        self.upsample =  Interpolate(input_size / size)
+        self.downsample =  Interpolate(0.25)
+        self.upsample =  Interpolate(4)
 
         self.encode_ab = EncodeAB(self.cielab)
         self.decode_q = DecodeQ(self.cielab)
@@ -215,7 +198,7 @@ class ColorizationNetwork(nn.Module):
                       activations=True):
 
         # block dimensions
-        block_depth, input_size, input_depth, output_depth = dims
+        block_depth, input_depth, output_depth = dims
 
         # default kernel sizes and strides
         if strides is None:
@@ -229,7 +212,6 @@ class ColorizationNetwork(nn.Module):
 
         for i in range(block_depth):
             layer = self._append_layer(
-                input_size=input_size,
                 input_depth=(input_depth if i == 0 else output_depth),
                 output_depth=output_depth,
                 kernel_size=kernel_sizes[i],
@@ -245,13 +227,9 @@ class ColorizationNetwork(nn.Module):
 
             block.add_module(layer_name, layer)
 
-            # update input size based on stride
-            input_size /= strides[i]
-
-        return block, input_size
+        return block
 
     def _append_layer(self,
-                      input_size,
                       input_depth,
                       output_depth,
                       kernel_size,
@@ -270,22 +248,11 @@ class ColorizationNetwork(nn.Module):
                                       stride=int(1 / stride),
                                       padding=(kernel_size - 1) // 2)
         else:
-            # adjust padding for dilated convolutions
-            if dilation > 1:
-                padding = self._dilation_padding(
-                    i=input_size,
-                    k=kernel_size,
-                    s=stride,
-                    d=dilation)
-            else:
-                padding = (kernel_size - 1) // 2
-
-            conv = nn.Conv2d(in_channels=input_depth,
-                             out_channels=output_depth,
-                             kernel_size=kernel_size,
-                             stride=stride,
-                             padding=padding,
-                             dilation=dilation)
+            conv = Conv2dPadSame(in_channels=input_depth,
+                                 out_channels=output_depth,
+                                 kernel_size=kernel_size,
+                                 stride=stride,
+                                 dilation=dilation)
 
         layer.add_module('conv', conv)
 
@@ -302,13 +269,6 @@ class ColorizationNetwork(nn.Module):
             layer.add_module('batchnorm', bn)
 
         return layer
-
-    @staticmethod
-    def _dilation_padding(i, k, s, d):
-        # calculates necessary padding to preserve input shape when applying
-        # dilated convolution, unlike Keras, PyTorch does not provide a way to
-        # calculate this automatidally
-        return int(((i - 1) * (s - 1) + d * (k - 1)) / 2)
 
     @staticmethod
     def _is_dilating_block(block):
