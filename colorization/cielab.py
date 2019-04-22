@@ -30,7 +30,7 @@ class ABGamut:
 
 class CIELAB:
     AB_BINSIZE = 10
-    AB_RANGE = [-110, 110, AB_BINSIZE]
+    AB_RANGE = [-110 - AB_BINSIZE // 2, 110 + AB_BINSIZE // 2, AB_BINSIZE]
     AB_DTYPE = np.float64
 
     RGB_RESOLUTION = 101
@@ -112,7 +112,7 @@ class CIELAB:
         return ab[ab_gamut_mask] + cls.AB_BINSIZE / 2
 
     @classmethod
-    def _plot_ab_matrix(cls, mat, ax=None, title=None):
+    def _plot_ab_matrix(cls, mat, pixel_borders=False, ax=None, title=None):
         if ax is None:
             _, ax = plt.subplots()
 
@@ -136,13 +136,54 @@ class CIELAB:
         ax.set_xlabel("$b$")
         ax.set_ylabel("$a$")
 
-        # set ticks
-        ax.set_xticks(np.linspace(*cls.AB_RANGE[:2], 5))
-        ax.set_yticks(np.linspace(*cls.AB_RANGE[:2], 5))
-        ax.invert_yaxis()
+        # minor ticks
+        if pixel_borders:
+            tick_min_minor = cls.AB_RANGE[0]
+            tick_max_minor = cls.AB_RANGE[1]
 
-        # set grid
-        ax.grid(color='k', linestyle=':', dashes=(1, 4))
+            ax.set_xticks(
+                np.linspace(tick_min_minor, tick_max_minor, mat.shape[1] + 1),
+                minor=True)
+
+            ax.set_yticks(
+                np.linspace(tick_min_minor, tick_max_minor, mat.shape[0] + 1),
+                minor=True)
+
+            ax.grid(which='minor',
+                    color='w',
+                    linestyle='-',
+                    linewidth=2)
+
+        # major ticks
+        tick_min_major = tick_min_minor + cls.AB_BINSIZE // 2
+        tick_max_major = tick_max_minor - cls.AB_BINSIZE // 2
+
+        ax.set_xticks(np.linspace(tick_min_major, tick_max_major, 5))
+        ax.set_yticks(np.linspace(tick_min_major, tick_max_major, 5))
+
+        # some of this will be obscured by the minor ticks due to a five year
+        # old matplotlib bug...
+        ax.grid(which='major',
+                color='k',
+                linestyle=':',
+                dashes=(1, 4))
+
+        # tick marks
+        for ax_ in ax.xaxis, ax.yaxis:
+            ax_.set_ticks_position('both')
+
+        ax.tick_params(axis='both', which='major', direction='in')
+        ax.tick_params(axis='both', which='minor', length=0)
+
+        # limits
+        lim_min = tick_min_major - cls.AB_BINSIZE
+        lim_max = tick_max_major + cls.AB_BINSIZE
+
+        ax.set_xlim([lim_min, lim_max])
+        ax.set_ylim([lim_min, lim_max])
+
+        # invert y-axis
+        ax.invert_yaxis()
 
     def plot_ab_gamut(self, l=50, ax=None):
         assert l >= 50 and l <= 100
@@ -158,8 +199,10 @@ class CIELAB:
         color_space_rgb[~self.ab_gamut_mask, :] = 1
 
         # display color space
-        self._plot_ab_matrix(
-            color_space_rgb, ax, r"$RGB(a, b \mid L = {})$".format(l))
+        self._plot_ab_matrix(color_space_rgb,
+                             pixel_borders=True,
+                             ax=ax,
+                             title=r"$RGB(a, b \mid L = {})$".format(l))
 
     def plot_empirical_distribution(self, dataset, ax=None, verbose=False):
         # accumulate ab values
@@ -185,4 +228,4 @@ class CIELAB:
         ab_acc_log = np.log10(ab_acc) - np.log10(len(dataset))
 
         # display distribution
-        self._plot_ab_matrix(ab_acc_log, ax, r"$log(P(a, b))$")
+        self._plot_ab_matrix(ab_acc_log, ax=ax, title=r"$log(P(a, b))$")

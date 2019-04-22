@@ -2,10 +2,8 @@
 
 import argparse
 
-import setup_path
-from nice_argparse import nice_help_formatter
-
 import colorization.config as config
+from colorization.util.argparse import nice_help_formatter
 
 
 USAGE = \

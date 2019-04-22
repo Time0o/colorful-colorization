@@ -1,29 +1,10 @@
 {
-    "dataset_args": {
-        "type": "colorization.data.tiny_image_net.TinyImageNet",
-        "params": {
-            "root": ["path", "../data/tiny-image-net"],
-            "dataset": "val",
-            "image_size": 224,
-            "limit": 100,
-	    "get_paths": true
-        }
-    },
-    "dataloader_args": {
-        "type": "torch.utils.data.DataLoader",
-        "params": {
-            "batch_size": 32,
-            "num_workers": 4
-        }
-    },
     "model_args": {
         "device": "cuda"
     },
     "network_args": {
         "type": "colorization.modules.colorization_network.ColorizationNetwork",
         "params": {
-            "input_size": 224,
-            "kernel_size": 3,
             "ab_gamut_file": ["path", "../resources/ab-gamut.npy"]
         }
     }
