@@ -7,7 +7,7 @@ def rgb_to_lab(img):
 
 
 def lab_to_rgb(img):
-    img_float = np.clip(color.rgb2lab(img), 0, 1)
+    img_float = np.clip(color.lab2rgb(img), 0, 1)
     img_uint8 = (255 * img_float).astype(np.uint8)
 
     return img_uint8
