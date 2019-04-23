@@ -1,4 +1,5 @@
 import os
+from collections import OrderedDict
 
 try:
     os.environ['GLOG_minloglevel'] = '2'
@@ -120,30 +121,19 @@ class ColorizationNetwork(nn.Module):
                 else:
                     assert False
 
-                if layer in caffe_layers_unused:
-                    caffe_layers_unused.remove(layer)
-
             elif layer_type == 'batchnorm':
-                layer_ = layer + 'norm'
+                norm = state_dict[param] = caffe_layers[layer][2]
 
-                if param_type == 'weight':
-                    state_dict[param] = caffe_layers[layer_][0]
-                elif param_type == 'bias':
-                    state_dict[param] = caffe_layers[layer_][1]
-                elif param_type == 'running_mean':
-                    state_dict[param] = caffe_network.params[layer_][0].data
+                if param_type == 'running_mean':
+                    state_dict[param] = caffe_layers[layer][0] / norm
                 elif param_type == 'running_var':
-                    state_dict[param] = caffe_network.params[layer_][1].data
-                elif param_type == 'num_batches_tracked':
-                    state_dict[param] = caffe_network.params[layer_][2].data
-                else:
-                    assert False
-
-                if layer_ in caffe_layers_unused:
-                    caffe_layers_unused.remove(layer_)
+                    state_dict[param] = caffe_layers[layer][1] / norm
 
             else:
                 raise ValueError("unhandled layer type '{}'".format(layer_type))
+
+            if layer in caffe_layers_unused:
+                caffe_layers_unused.remove(layer)
 
         # assert that no caffe parameter remain unused
         caffe_layers_unused -= _CAFFE_LAYERS_SUPERFLUOUS
@@ -218,7 +208,6 @@ class ColorizationNetwork(nn.Module):
                 kernel_size=kernel_sizes[i],
                 stride=strides[i],
                 dilation=dilation,
-                batchnorm=(batchnorm and i == block_depth - 1),
                 activation=activations)
 
             if block_depth == 1:
@@ -228,6 +217,14 @@ class ColorizationNetwork(nn.Module):
 
             block.add_module(layer_name, layer)
 
+        # optionally add batchnorm layer
+        if batchnorm:
+            bn = nn.Sequential(OrderedDict([
+                ('batchnorm', nn.BatchNorm2d(output_depth, affine=False))
+            ]))
+
+            block.add_module('{}_{}norm'.format(name, block_depth), bn)
+
         return block
 
     def _append_layer(self,
@@ -236,7 +233,6 @@ class ColorizationNetwork(nn.Module):
                       kernel_size,
                       stride,
                       dilation,
-                      batchnorm,
                       activation):
 
         layer = nn.Sequential()
@@ -262,12 +258,6 @@ class ColorizationNetwork(nn.Module):
             relu = nn.ReLU(inplace=True)
 
             layer.add_module('relu', relu)
-
-        # batch normalization
-        if batchnorm:
-            bn = nn.BatchNorm2d(output_depth)
-
-            layer.add_module('batchnorm', bn)
 
         return layer
 
