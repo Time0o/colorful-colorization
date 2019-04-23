@@ -4,8 +4,10 @@ import re
 from glob import glob
 
 import numpy as np
-from skimage import color, io, transform
+from skimage import io
 from torch.utils.data.dataset import Dataset
+
+from ..util.image import resize, rgb_to_lab
 
 
 class TinyImageNet(Dataset):
@@ -139,19 +141,17 @@ class TinyImageNet(Dataset):
 
         # scale image to desired size
         if self.image_size != self.IMAGE_SIZE_ACTUAL:
-            image_rgb = transform.pyramid_expand(
-                image_rgb,
-                upscale=(self.image_size / self.IMAGE_SIZE_ACTUAL),
-                multichannel=True)
+            image_rgb = resize(image_rgb, self.IMAGE_SIZE_ACTUAL)
 
-        image_lab = self._process_image(color.rgb2lab(image_rgb))
+        image_lab = self._process_image(image_rgb)
 
         return image_lab, image_path
 
-    def _process_image(self, image):
-        image = image.astype(self.image_dtype)
+    def _process_image(self, image_rgb):
+        image_lab = rgb_to_lab(image)
+        image_lab = imagelab.astype(self.image_dtype)
 
-        return np.moveaxis(image, -1, 0)
+        return np.moveaxis(image_lab, -1, 0)
 
     @staticmethod
     def _listdir(path, sort_num=False):

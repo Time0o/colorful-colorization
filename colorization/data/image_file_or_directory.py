@@ -1,8 +1,10 @@
 import os
 
 import numpy as np
-from skimage import color, io
+from skimage import io
 from torch.utils.data.dataset import Dataset
+
+from ..util.image import rgb_to_lab
 
 
 class ImageFileOrDirectory(Dataset):
@@ -37,7 +39,7 @@ class ImageFileOrDirectory(Dataset):
             return 1
 
     def _load_image(self, path):
-        img = color.rgb2lab(io.imread(path))
+        img = rgb_to_lab(io.imread(path))
         img = np.moveaxis(img, -1, 0)
         img = img.astype(self.DTYPE)
 

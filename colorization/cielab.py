@@ -7,6 +7,7 @@ import numpy as np
 from skimage import color
 
 from .resources import get_resource_path
+from .util.image import rgb_to_lab
 
 
 class ABGamut:
@@ -40,7 +41,7 @@ class CIELAB:
     RGB_DTYPE = np.float64
 
     L_MEAN = 50
-    L_STD = 50
+
     Q_DTYPE = np.int64
 
     def __init__(self, gamut=None):
@@ -171,7 +172,7 @@ class CIELAB:
         color_space_lab = np.dstack((l_, self.ab))
 
         # convert to RGB
-        color_space_rgb = color.lab2rgb(color_space_lab)
+        color_space_rgb = lab_to_rgb(color_space_lab)
 
         # mask out of gamut colors
         color_space_rgb[~self.ab_gamut_mask, :] = 1
