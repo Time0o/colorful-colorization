@@ -5,6 +5,7 @@ import os
 import warnings
 from glob import glob
 
+import numpy as np
 from skimage import color, io
 from torch.utils.data import DataLoader
 
@@ -13,6 +14,7 @@ from colorization.data.image_file_or_directory import ImageFileOrDirectory
 from colorization.model import Model
 from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
+from colorization.util.image import lab_to_rgb, resize, torch_to_numpy
 
 
 USAGE = \
@@ -139,9 +141,21 @@ if __name__ == '__main__':
     for img, path in dataloader:
         path = path[0]
 
-        img_pred = model.predict(img[:, :1, :, :])
-        img_pred_numpy = img_pred.numpy().squeeze().transpose(1, 2, 0)
-        img_pred_rgb = color.lab2rgb(img_pred_numpy)
+        # extract lightness channel
+        l_in = img[:, :1, :, :]
+
+        # run prediction
+        l_out = torch_to_numpy(l_in)
+        ab_out = torch_to_numpy(model.predict(img[:, :1, :, :]))
+        print('FUCK', ab_out[:, :, 0].min(), ab_out[:, :, 0].max()) # TODO
+        print('YOU', ab_out[:, :, 1].min(), ab_out[:, :, 1].max()) # TODO
+
+        # scale output
+        ab_out = resize(ab_out, l_out.shape[:2])
+
+        # assemble color image and transform to RGB colorspace
+        img_out = np.dstack((l_out, ab_out))
+        img_out_rgb = lab_to_rgb(img_out)
 
         if args.output_image is not None:
             out_path = args.output_image
@@ -150,4 +164,4 @@ if __name__ == '__main__':
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            io.imsave(out_path, img_pred_rgb)
+            io.imsave(out_path, img_out_rgb)

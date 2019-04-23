@@ -22,13 +22,13 @@ except ImportError:
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ..cielab import ABGamut, DEFAULT_CIELAB
 from .conv2d_pad_same import Conv2dPadSame
 from .cross_entropy_loss_2d import CrossEntropyLoss2d
 from .decode_q import DecodeQ
 from .encode_ab import EncodeAB
-from .interpolate import Interpolate
 
 
 class ColorizationNetwork(nn.Module):
@@ -78,9 +78,6 @@ class ColorizationNetwork(nn.Module):
         ]
 
         # label transformation
-        self.downsample =  Interpolate(0.25)
-        self.upsample =  Interpolate(4)
-
         self.encode_ab = EncodeAB(DEFAULT_CIELAB)
         self.decode_q = DecodeQ(DEFAULT_CIELAB)
 
@@ -168,16 +165,15 @@ class ColorizationNetwork(nn.Module):
 
         # label transformation
         if self.training:
-            ab = self.downsample(ab)
+            ab = F.interpolate(ab, size=q_pred.shape[2:])
 
             q_actual = self.encode_ab(ab)
 
             return q_pred, q_actual
         else:
-            q_pred = self.upsample(q_pred)
             ab_pred = self.decode_q(q_pred)
 
-            return torch.cat((l, ab_pred), dim=1)
+            return ab_pred
 
     def _create_block(self,
                       name,
