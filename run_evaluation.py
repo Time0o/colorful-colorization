@@ -147,8 +147,6 @@ if __name__ == '__main__':
         # run prediction
         l_out = torch_to_numpy(l_in)
         ab_out = torch_to_numpy(model.predict(img[:, :1, :, :]))
-        print('FUCK', ab_out[:, :, 0].min(), ab_out[:, :, 0].max()) # TODO
-        print('YOU', ab_out[:, :, 1].min(), ab_out[:, :, 1].max()) # TODO
 
         # scale output
         ab_out = resize(ab_out, l_out.shape[:2])
