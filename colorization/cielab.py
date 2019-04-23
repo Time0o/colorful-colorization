@@ -41,7 +41,7 @@ class CIELAB:
     RGB_DTYPE = np.float64
 
     L_MEAN = 50
-    L_STD = 50
+
     Q_DTYPE = np.int64
 
     def __init__(self, gamut=None):

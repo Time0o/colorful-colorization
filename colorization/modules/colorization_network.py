@@ -151,7 +151,7 @@ class ColorizationNetwork(nn.Module):
             l = img
 
         # normalize lightness
-        l_norm = (l - DEFAULT_CIELAB.L_MEAN) / DEFAULT_CIELAB.L_STD
+        l_norm = l - DEFAULT_CIELAB.L_MEAN
 
         # prediction
         q_pred = l_norm
