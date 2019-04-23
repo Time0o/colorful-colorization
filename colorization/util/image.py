@@ -16,7 +16,7 @@ def lab_to_rgb(img):
 def torch_to_numpy(batch):
     assert batch.shape[0] == 1
 
-    return batch[0, :, :, :].numpy().transpose(1, 2, 0)
+    return batch[0, :, :, :].cpu().numpy().transpose(1, 2, 0)
 
 
 def resize(img, size):

@@ -172,21 +172,20 @@ def logger_from_config(config):
 
 def model_from_config(config, trainable=True):
     # create network
-    network = ColorizationNetwork()
+    net = ColorizationNetwork(**config.get('network_args', {}))
 
     if trainable:
         # create loss function
         loss = CrossEntropyLoss2d()
 
         # create optimizer
-        optimizer = _construct_class(config['optimizer_args'],
-                                     network.parameters())
+        optimizer = _construct_class(config['optimizer_args'], net.parameters())
     else:
         loss = None
         optimizer = None
 
     # construct model
-    return Model(network=network,
+    return Model(network=net,
                  loss=loss,
                  optimizer=optimizer,
                  **config.get('model_args', {}))

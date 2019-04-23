@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from ..cielab import ABGamut, CIELAB, DEFAULT_CIELAB
 from .conv2d_pad_same import Conv2dPadSame
-from .decode_q import DecodeQ
+from .annealed_mean_decode_q import AnnealedMeanDecodeQ
 from .encode_ab import EncodeAB
 
 
@@ -25,7 +25,7 @@ class ColorizationNetwork(nn.Module):
 
     DEFAULT_KERNEL_SIZE = 3
 
-    def __init__(self):
+    def __init__(self, annealed_mean_T=0):
         super().__init__()
 
         # prediction
@@ -68,7 +68,10 @@ class ColorizationNetwork(nn.Module):
 
         # label transformation
         self.encode_ab = EncodeAB(DEFAULT_CIELAB)
-        self.decode_q = DecodeQ(DEFAULT_CIELAB)
+        self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=annealed_mean_T)
+
+        # move to device
+        self.cuda()
 
     def init_from_caffe(self, proto, model):
         # read in caffe network

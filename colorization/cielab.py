@@ -32,17 +32,17 @@ class ABGamut:
 
 
 class CIELAB:
+    L_MEAN = 50
+
     AB_BINSIZE = 10
     AB_RANGE = [-110 - AB_BINSIZE // 2, 110 + AB_BINSIZE // 2, AB_BINSIZE]
-    AB_DTYPE = np.float64
+    AB_DTYPE = np.float32
+
+    Q_DTYPE = np.int64
 
     RGB_RESOLUTION = 101
     RGB_RANGE = [0, 1, RGB_RESOLUTION]
     RGB_DTYPE = np.float64
-
-    L_MEAN = 50
-
-    Q_DTYPE = np.int64
 
     def __init__(self, gamut=None):
         self.gamut = gamut if gamut is not None else ABGamut()
