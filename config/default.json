@@ -23,6 +23,9 @@
             "weight_decay": 1e-3
         }
     },
+    "network_args": {
+        "annealed_mean_T": 0.318
+    },
     "model_args": {
         "logger": "training_logger"
     },

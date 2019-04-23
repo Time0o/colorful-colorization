@@ -1,9 +1,10 @@
 import torch
 
 
-class DecodeQ:
-    def __init__(self, cielab):
+class AnnealedMeanDecodeQ:
+    def __init__(self, cielab, T):
         self.cielab = cielab
+        self.T = T
 
         self.q_to_ab = torch.from_numpy(cielab.q_to_ab)
         self.q_to_ab_cuda = self.q_to_ab.cuda()
@@ -16,7 +17,13 @@ class DecodeQ:
         return ab.type(q.dtype)
 
     def _collapse(self, q):
-        return q.max(dim=1, keepdim=True)[1]
+        if self.T == 0:
+            return q.max(dim=1, keepdim=True)[1]
+        else:
+            q = torch.exp(torch.log(q) / self.T)
+            q /= q.sum(dim=1, keepdim=True)
+
+            return q.mean(dim=1, keepdim=True)
 
     def _unbin(self, q):
         _, _, h, w = q.shape
