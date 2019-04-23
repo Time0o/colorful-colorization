@@ -25,12 +25,14 @@ class ImageFileOrDirectory(Dataset):
             self.mode = self.MODE_FILE
             self.file = file_or_root
 
+        self.transform = transform
+
     def __getitem__(self, index):
         if self.mode == self.MODE_DIR:
             path = os.path.join(self.root, self.files[index])
-            return self._load_image(path), path
+            return self._load_and_process_image(path), path
         elif self.mode == self.MODE_FILE:
-            return self._load_image(self.file), self.file
+            return self._load_and_process_image(self.file), self.file
 
     def __len__(self):
         if self.mode == self.MODE_DIR:
@@ -38,9 +40,10 @@ class ImageFileOrDirectory(Dataset):
         elif self.mode == self.MODE_FILE:
             return 1
 
-    def _load_image(self, path):
-        img = rgb_to_lab(io.imread(path))
-        img = np.moveaxis(img, -1, 0)
-        img = img.astype(self.DTYPE)
+    def _load_and_process_image(self, path):
+        img = rgb_to_lab(io.imread(path)).astype(self.DTYPE)
 
-        return img
+        if self.transform:
+            img = self.transform(img)
+
+        return np.moveaxis(img, -1, 0)

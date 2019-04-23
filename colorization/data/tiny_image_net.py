@@ -1,5 +1,4 @@
 import os
-import pickle
 import re
 from glob import glob
 
@@ -7,7 +6,7 @@ import numpy as np
 from skimage import io
 from torch.utils.data.dataset import Dataset
 
-from ..util.image import resize, rgb_to_lab
+from ..util.image import rgb_to_lab
 
 
 class TinyImageNet(Dataset):
@@ -15,8 +14,7 @@ class TinyImageNet(Dataset):
     DATASET_VAL = 'val'
     DATASET_TEST = 'test'
 
-    IMAGE_SIZE_ACTUAL = 64
-    IMAGE_DTYPE = np.float32
+    DTYPE = np.float32
 
     CLEAN_ASSUME = 'assume'
     CLEAN_SKIP = 'skip'
@@ -25,28 +23,23 @@ class TinyImageNet(Dataset):
     def __init__(self,
                  root,
                  dataset=DATASET_TRAIN,
-                 image_size=IMAGE_SIZE_ACTUAL,
-                 image_dtype=np.float32,
                  limit=None,
                  clean=CLEAN_ASSUME,
                  transform=None):
 
         self.root = root
         self.dataset = dataset
-        self.image_size = image_size
-        self.image_dtype = image_dtype
         self.limit = limit
+        self.transform = transform
 
         self._build_indices()
         self._clean(clean)
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            r = range(*index.indices(len(self._indices[self.dataset])))
+        image_path = self._indices[self.dataset][index]
+        img = io.imread(image_path)
 
-            return [self._getitem(i) for i in r]
-        else:
-            return self._getitem(index)
+        return self._process_image(img), image_path
 
     def __len__(self):
         l = len(self._indices[self.dataset])
@@ -81,16 +74,6 @@ class TinyImageNet(Dataset):
             raise ValueError(fmt.format(', '.join(valid)))
 
         self._dataset = dataset
-
-    @property
-    def image_size(self):
-        return self._image_size
-
-    @image_size.setter
-    def image_size(self, image_size):
-        assert image_size >= self.IMAGE_SIZE_ACTUAL
-
-        self._image_size = image_size
 
     def _build_indices(self):
         self._indices = {}
@@ -133,25 +116,13 @@ class TinyImageNet(Dataset):
 
             self._indices[dataset] = index_rgb_only
 
-    def _getitem(self, index):
-        image_path = self._indices[self.dataset][index]
-        image_rgb = io.imread(image_path)
+    def _process_image(self, img):
+        img = rgb_to_lab(img).astype(self.DTYPE)
 
-        assert self._is_rgb(image_rgb) and self._has_right_size(image_rgb)
+        if self.transform:
+            img = self.transform(img)
 
-        # scale image to desired size
-        if self.image_size != self.IMAGE_SIZE_ACTUAL:
-            image_rgb = resize(image_rgb, self.IMAGE_SIZE_ACTUAL)
-
-        image_lab = self._process_image(image_rgb)
-
-        return image_lab, image_path
-
-    def _process_image(self, image_rgb):
-        image_lab = rgb_to_lab(image)
-        image_lab = imagelab.astype(self.image_dtype)
-
-        return np.moveaxis(image_lab, -1, 0)
+        return np.moveaxis(img, -1, 0)
 
     @staticmethod
     def _listdir(path, sort_num=False):
@@ -171,11 +142,3 @@ class TinyImageNet(Dataset):
             files.sort()
 
         return files
-
-    @staticmethod
-    def _is_rgb(image):
-        return len(image.shape) == 3 and image.shape[2] == 3
-
-    @classmethod
-    def _has_right_size(cls, image):
-        return image.shape[0] == image.shape[1] == cls.IMAGE_SIZE_ACTUAL
