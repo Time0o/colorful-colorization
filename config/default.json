@@ -2,8 +2,7 @@
     "dataset_args": {
         "type": "colorization.data.tiny_image_net.TinyImageNet",
         "params": {
-            "root": ["path", "../data/tiny-image-net"],
-            "limit": null
+            "root": ["path", "../data/tiny-image-net"]
         }
     },
     "dataloader_args": {
@@ -16,12 +15,6 @@
             "pin_memory": true
         }
     },
-    "network_args": {
-        "type": "colorization.modules.colorization_network.ColorizationNetwork"
-    },
-    "loss_args": {
-        "type": "colorization.modules.cross_entropy_loss_2d.CrossEntropyLoss2d"
-    },
     "optimizer_args": {
         "type": "torch.optim.Adam",
         "params": {
@@ -31,7 +24,6 @@
         }
     },
     "model_args": {
-        "device": "cuda",
         "logger": "training_logger"
     },
     "training_args": {

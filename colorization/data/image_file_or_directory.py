@@ -30,9 +30,9 @@ class ImageFileOrDirectory(Dataset):
     def __getitem__(self, index):
         if self.mode == self.MODE_DIR:
             path = os.path.join(self.root, self.files[index])
-            return self._load_and_process_image(path), path
+            return self._load_and_process_image(path)
         elif self.mode == self.MODE_FILE:
-            return self._load_and_process_image(self.file), self.file
+            return self._load_and_process_image(self.file)
 
     def __len__(self):
         if self.mode == self.MODE_DIR:

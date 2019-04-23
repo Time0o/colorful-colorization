@@ -8,6 +8,8 @@ from importlib import import_module
 from typing import Dict, Generator, Tuple, Union
 
 from .model import Model
+from .modules.colorization_network import ColorizationNetwork
+from .modules.cross_entropy_loss_2d import CrossEntropyLoss2d
 
 
 # recursive dictionary operations
@@ -89,27 +91,6 @@ def _resolve_paths(config: dict, root: str) -> None:
             parent_dict[val_path[-1]] = _resolve_path(val, root)
 
 
-# configuration post-processing
-
-def _apply_hooks(config: Dict[str, dict]) -> None:
-    # Transform values for specific keys in a configuration dictionary according
-    # to predefined rules. This way the configuration file can be a simple JSON
-    # file instead of a Python snippet.
-
-    HOOKS = {
-        # TODO
-    }
-
-    for val_path, val in _recurse_dictionary(config):
-        if tuple(val_path) in HOOKS:
-            parent_dict = _get_nested_dictionary(config, val_path)
-
-            new_key, new_val = HOOKS[tuple(val_path)](val)
-
-            del parent_dict[val_path[-1]]
-            parent_dict[new_key] = new_val
-
-
 # config loading and merging
 
 def _load_config(path: str) -> Dict[str, dict]:
@@ -133,7 +114,6 @@ def _merge_configs(config: Dict[str, dict],
     default_copy = default.copy()
 
     return _update_recursive(default_copy, config)
-
 
 
 # string to object conversion operations
@@ -171,8 +151,6 @@ def get_config(path: str, default_path=None) -> Dict[str, dict]:
 
     _resolve_paths(config, os.path.dirname(os.path.abspath(path)))
 
-    _apply_hooks(config)
-
     return config
 
 
@@ -186,13 +164,19 @@ def dataloader_from_config(config):
     return dataloader
 
 
+def logger_from_config(config):
+    # configure logger
+    if 'log_args' in config:
+        logging.config.dictConfig(config['log_args'])
+
+
 def model_from_config(config, trainable=True):
     # create network
-    network = _construct_class(config['network_args'])
+    network = ColorizationNetwork()
 
     if trainable:
         # create loss function
-        loss = _construct_class(config['loss_args'])
+        loss = CrossEntropyLoss2d()
 
         # create optimizer
         optimizer = _construct_class(config['optimizer_args'],
@@ -205,10 +189,4 @@ def model_from_config(config, trainable=True):
     return Model(network=network,
                  loss=loss,
                  optimizer=optimizer,
-                 **config['model_args'])
-
-
-def logger_from_config(config):
-    # configure logger
-    if 'log_args' in config:
-        logging.config.dictConfig(config['log_args'])
+                 **config.get('model_args', {}))

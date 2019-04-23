@@ -39,7 +39,7 @@ class TinyImageNet(Dataset):
         image_path = self._indices[self.dataset][index]
         img = io.imread(image_path)
 
-        return self._process_image(img), image_path
+        return self._process_image(img)
 
     def __len__(self):
         l = len(self._indices[self.dataset])
