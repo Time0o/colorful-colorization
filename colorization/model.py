@@ -6,8 +6,6 @@ from glob import glob
 import torch
 
 
-# TODO: save/restore across devices
-
 class Model:
     CHECKPOINT_PREFIX = 'checkpoint'
     CHECKPOINT_POSTFIX = 'tar'
@@ -17,13 +15,11 @@ class Model:
                  network,
                  loss=None,
                  optimizer=None,
-                 device='cuda',
                  logger=None):
 
         self.network = network
         self.loss = loss
         self.optimizer = optimizer
-        self.device = device
 
         if logger is not None:
             if isinstance(logger, str):
@@ -32,18 +28,6 @@ class Model:
                 self.logger = logger
         else:
             self.logger = logging.getLogger('dummy')
-
-    @property
-    def device(self):
-        return self._device
-
-    @device.setter
-    def device(self, d):
-        self._device = d
-
-        # move network to device
-        if d is not None:
-            self.network.to(d)
 
     def train(self,
               dataloader,
@@ -73,8 +57,7 @@ class Model:
         while not done:
             for img in dataloader:
                 # move data to device
-                if self.device is not None:
-                    img = img.to(self.device)
+                img = img.cuda()
 
                 # perform parameter update
                 self.optimizer.zero_grad()
@@ -115,13 +98,11 @@ class Model:
         self.network.eval()
 
         # move data to device
-        if self.device is not None:
-            img_device = img.to(self.device)
+        img = img.cuda()
 
         # run prediction
         with torch.no_grad():
-            img_pred_device = self.network(img_device)
-            img_pred = img_pred_device.to(img.device)
+            img_pred = self.network(img)
 
         return img_pred
 

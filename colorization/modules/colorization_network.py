@@ -70,6 +70,9 @@ class ColorizationNetwork(nn.Module):
         self.encode_ab = EncodeAB(DEFAULT_CIELAB)
         self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=annealed_mean_T)
 
+        # move to device
+        self.cuda()
+
     def init_from_caffe(self, proto, model):
         # read in caffe network
         caffe_network = caffe.Net(proto, model, caffe.TEST)
