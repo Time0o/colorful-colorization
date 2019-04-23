@@ -5,15 +5,12 @@ by Zhang et al.
 
 ## Prerequisites
 
-Install python dependencies by running `pip -r requirements.txt`.
+We recommend you use Anaconda to create a virtual enviroment in which to
+install the modules needed to run this program, i.e you should run:
 
-You will need to install PyTorch separately, see the PyTorch homepage for
-instructions.
-
-Note that in order to load pretrained model parameters from the Caffe model
-provided by Zhang you will also have to install Caffe (see for example [these
-instructions]( http://caffe.berkeleyvision.org/install_apt_debian.html) if
-you're running Debian).
+```
+conda env create --file environment.yml
+```
 
 In addition, you will need some files provided by the authors of the paper,
 these include the points of the ab gamut bins used to discretize the image
