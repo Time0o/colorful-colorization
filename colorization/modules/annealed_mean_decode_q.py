@@ -8,20 +8,22 @@ class AnnealedMeanDecodeQ:
         self.T = T
 
     def __call__(self, q):
-        q_discrete = self._collapse(q)
+        if self.T == 0:
+            # makeing this a special case is somewhat ugly but I have found
+            # no way to make this a special case of the branch below (in
+            # NumPy that would be trivial)
+            ab = self._unbin(self._mode(q))
+        else:
+            q = self._annealed_softmax(q)
 
-        ab = self._unbin(q_discrete)
+            a = self._annealed_mean(q, 0)
+            b = self._annealed_mean(q, 1)
+            ab = torch.cat((a, b), dim=1)
 
         return ab.type(q.dtype)
 
-    def _collapse(self, q):
-        if self.T == 0:
-            return q.max(dim=1, keepdim=True)[1]
-        else:
-            q = torch.exp(torch.log(q) / self.T)
-            q /= q.sum(dim=1, keepdim=True)
-
-            return q.mean(dim=1, keepdim=True)
+    def _mode(self, q):
+        return q.max(dim=1, keepdim=True)[1]
 
     def _unbin(self, q):
         _, _, h, w = q.shape
@@ -35,3 +37,14 @@ class AnnealedMeanDecodeQ:
         ])
 
         return ab
+
+    def _annealed_softmax(self, q):
+        q = torch.exp(q / self.T)
+        q /= q.sum(dim=1, keepdim=True)
+
+        return q
+
+    def _annealed_mean(self, q, d):
+        am = torch.tensordot(q, self.q_to_ab[:, d], dims=((1,), (0,)))
+
+        return am.unsqueeze(dim=1)
