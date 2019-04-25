@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skimage import color
 
-from .resources import get_resource_path
 from .util.image import rgb_to_lab
+from .util.resources import get_resource_path
 
 
 class ABGamut:
