@@ -164,12 +164,6 @@ def dataloader_from_config(config):
     return dataloader
 
 
-def logger_from_config(config):
-    # configure logger
-    if 'log_args' in config:
-        logging.config.dictConfig(config['log_args'])
-
-
 def model_from_config(config, trainable=True):
     # create network
     net = ColorizationNetwork(**config.get('network_args', {}))
@@ -184,8 +178,12 @@ def model_from_config(config, trainable=True):
         loss = None
         optimizer = None
 
+    # get log config
+    log_config = config.get('log_args', None)
+
     # construct model
     return Model(network=net,
                  loss=loss,
                  optimizer=optimizer,
+                 log_config=log_config,
                  **config.get('model_args', {}))
