@@ -33,9 +33,6 @@ if __name__ == '__main__':
     # prepare dataset
     dataloader = config.dataloader_from_config(cfg)
 
-    # create logger
-    logger = config.logger_from_config(cfg)
-
     # create model
     model = config.model_from_config(cfg)
 

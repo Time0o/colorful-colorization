@@ -1,9 +1,43 @@
 import logging
+import logging.config
 import os
 import re
 from glob import glob
+from warnings import warn
 
 import torch
+from torch.multiprocessing import Process, SimpleQueue, set_start_method
+
+try:
+    set_start_method('spawn', force=True)
+    _mp_spawn = True
+except RuntimeError:
+    warn("failed to set start method to 'spawn', logging will be disabled")
+    _mp_spawn = False
+
+
+class _LogData:
+    def __init__(self, i, i_max, loss):
+        self.i = i
+        self.i_max = i_max
+        self.loss = loss
+
+    def __repr__(self):
+        fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
+        return fmt.format(self.i, self.i_max, self.loss)
+
+
+def _log_progress(log_config, logger, queue):
+    logging.config.dictConfig(log_config)
+    logger = logging.getLogger(logger)
+
+    while True:
+        data = queue.get()
+
+        if data == 'done':
+            break
+
+        logger.info(data)
 
 
 class Model:
@@ -15,19 +49,19 @@ class Model:
                  network,
                  loss=None,
                  optimizer=None,
+                 log_config=None,
                  logger=None):
 
         self.network = network
         self.loss = loss
         self.optimizer = optimizer
 
-        if logger is not None:
-            if isinstance(logger, str):
-                self.logger = logging.getLogger(logger)
-            else:
-                self.logger = logger
-        else:
-            self.logger = logging.getLogger('dummy')
+        self._log_enabled = \
+            _mp_spawn and log_config is not None and logger is not None
+
+        if self._log_enabled:
+            self._log_config = log_config
+            self._logger = logger
 
     def train(self,
               dataloader,
@@ -44,6 +78,13 @@ class Model:
         # switch to training mode (essential for batch normalization)
         self.network.train()
 
+        # create logging thread
+        if self._log_enabled:
+            log_queue = SimpleQueue()
+            log = Process(target=_log_progress,
+                          args=(self._log_config, self._logger, log_queue))
+            log.start()
+
         # optimization loop
         if epoch_init is None:
             i = 1
@@ -52,7 +93,7 @@ class Model:
             i = len(dataloader) * (epoch_init - 1) + 1
             ep = epoch_init
 
-
+        log = None
         done = False
         while not done:
             for img in dataloader:
@@ -69,10 +110,7 @@ class Model:
                 self.optimizer.step()
 
                 # display progress
-                fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
-                msg = fmt.format(i, iterations, loss)
-
-                self.logger.info(msg)
+                log_queue.put(_LogData(i, iterations, loss.data))
 
                 # increment iteration counter
                 i += 1
@@ -88,6 +126,10 @@ class Model:
                         self.checkpoint_training(checkpoint_dir, ep)
 
                 ep += 1
+
+        # stop logging thread
+        log_queue.put('done')
+        log.join()
 
         # save final checkpoint
         if checkpoint_dir is not None:
