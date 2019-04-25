@@ -1,0 +1,258 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>image_file_or_directory &mdash; Colorful Image Colorization  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="annealed_mean_decode_q" href="../modules/index.html" />
+    <link rel="prev" title="benchmark" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Colorful Image Colorization
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">colorization</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html">benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#module-colorization.cielab">cielab</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#module-colorization.config">config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#module-colorization.model">model</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#data">data</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">image_file_or_directory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-colorization.data.tiny_image_net">tiny_image_net</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#modules">modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../modules/index.html">annealed_mean_decode_q</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../modules/index.html#module-colorization.modules.colorization_network">colorization_network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../modules/index.html#module-colorization.modules.conv2d_pad_same">conv2d_pad_same</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../modules/index.html#module-colorization.modules.cross_entropy_loss_2d">cross_entropy_loss_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../modules/index.html#module-colorization.modules.encode_ab">encode_ab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#util">util</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../util/index.html">argparse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../util/index.html#module-colorization.util.image">image</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../util/index.html#module-colorization.util.memory">memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../util/index.html#module-colorization.util.resources">resources</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../util/index.html#module-colorization.util.timing">timing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Colorful Image Colorization</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">colorization</a> &raquo;</li>
+        
+          <li><a href="../index.html">benchmark</a> &raquo;</li>
+        
+      <li>image_file_or_directory</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../../_sources/modules/colorization/data/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-colorization.data.image_file_or_directory">
+<span id="image-file-or-directory"></span><h1>image_file_or_directory<a class="headerlink" href="#module-colorization.data.image_file_or_directory" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="colorization.data.image_file_or_directory.ImageFileOrDirectory">
+<em class="property">class </em><code class="descclassname">colorization.data.image_file_or_directory.</code><code class="descname">ImageFileOrDirectory</code><span class="sig-paren">(</span><em>file_or_root</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.data.image_file_or_directory.ImageFileOrDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="colorization.data.image_file_or_directory.ImageFileOrDirectory.DTYPE">
+<code class="descname">DTYPE</code><a class="headerlink" href="#colorization.data.image_file_or_directory.ImageFileOrDirectory.DTYPE" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.float32</span></code></p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-colorization.data.tiny_image_net">
+<span id="tiny-image-net"></span><h1>tiny_image_net<a class="headerlink" href="#module-colorization.data.tiny_image_net" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="colorization.data.tiny_image_net.TinyImageNet">
+<em class="property">class </em><code class="descclassname">colorization.data.tiny_image_net.</code><code class="descname">TinyImageNet</code><span class="sig-paren">(</span><em>root</em>, <em>dataset='train'</em>, <em>limit=None</em>, <em>clean='assume'</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.data.tiny_image_net.TinyImageNet" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="colorization.data.tiny_image_net.TinyImageNet.DTYPE">
+<code class="descname">DTYPE</code><a class="headerlink" href="#colorization.data.tiny_image_net.TinyImageNet.DTYPE" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.float32</span></code></p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../modules/index.html" class="btn btn-neutral float-right" title="annealed_mean_decode_q" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="benchmark" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Carolina Bianchi, Álvaro Orgaz Expósito, Timo Nicolai
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

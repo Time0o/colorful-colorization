@@ -1,0 +1,358 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>benchmark &mdash; Colorful Image Colorization  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="image_file_or_directory" href="data/index.html" />
+    <link rel="prev" title="colorization" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Colorful Image Colorization
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">colorization</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-colorization.cielab">cielab</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-colorization.config">config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-colorization.model">model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data">data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="data/index.html">image_file_or_directory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data/index.html#module-colorization.data.tiny_image_net">tiny_image_net</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#modules">modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/index.html">annealed_mean_decode_q</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/index.html#module-colorization.modules.colorization_network">colorization_network</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/index.html#module-colorization.modules.conv2d_pad_same">conv2d_pad_same</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/index.html#module-colorization.modules.cross_entropy_loss_2d">cross_entropy_loss_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/index.html#module-colorization.modules.encode_ab">encode_ab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#util">util</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="util/index.html">argparse</a></li>
+<li class="toctree-l3"><a class="reference internal" href="util/index.html#module-colorization.util.image">image</a></li>
+<li class="toctree-l3"><a class="reference internal" href="util/index.html#module-colorization.util.memory">memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="util/index.html#module-colorization.util.resources">resources</a></li>
+<li class="toctree-l3"><a class="reference internal" href="util/index.html#module-colorization.util.timing">timing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Colorful Image Colorization</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">colorization</a> &raquo;</li>
+        
+      <li>benchmark</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/modules/colorization/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-colorization.benchmark">
+<span id="benchmark"></span><h1>benchmark<a class="headerlink" href="#module-colorization.benchmark" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="module-colorization.cielab">
+<span id="cielab"></span><h1>cielab<a class="headerlink" href="#module-colorization.cielab" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="module-colorization.config">
+<span id="config"></span><h1>config<a class="headerlink" href="#module-colorization.config" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="module-colorization.model">
+<span id="model"></span><h1>model<a class="headerlink" href="#module-colorization.model" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="colorization.model.Model">
+<em class="property">class </em><code class="descclassname">colorization.model.</code><code class="descname">Model</code><span class="sig-paren">(</span><em>network</em>, <em>loss=None</em>, <em>optimizer=None</em>, <em>log_config=None</em>, <em>logger=None</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.model.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Top-level wrapper class implementing training and prediction.</p>
+<p>This is a wrapper class that composes a PyTorch network with a loss
+function and an optimizer and implements training, prediction,
+checkpointing and logging functionality. Its implementation is kept
+independent of the concrete underlying network.</p>
+<dl class="classmethod">
+<dt id="colorization.model.Model.find_latest_checkpoint">
+<em class="property">classmethod </em><code class="descname">find_latest_checkpoint</code><span class="sig-paren">(</span><em>checkpoint_dir</em>, <em>skip_final=False</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.model.Model.find_latest_checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the most up to date checkpoint file in a checkpoint directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>checkpoint_dir</strong> (<em>str</em>) – Directory in which to search for checkpoints, must exist.</p></li>
+<li><p><strong>skip_final</strong> (<em>bool</em>) – If <cite>True</cite> don’t consider the checkpoint created after the final
+training iteration. This is sensible if the returned checkpoint
+will be be used to resume training since training can only be
+resumed from checkpoints created at the end of an epoch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The file path to the latest checkpoint as well as the epoch at which
+that checkpoint was created in a tuple.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="colorization.model.Model.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>img</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.model.Model.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform single batch prediction using the current network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>img</strong> (<em>torch.Tensor</em>) – A tensor of shape <cite>(n, 1, h, w)</cite> where <cite>n</cite> is the size of the
+batch to be predicted and <cite>h</cite> and <cite>w</cite> are image dimensions. The
+image should be the lightness channel of an image converted into
+the Lab color space.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tensor of shape <cite>(n, 1, h, w)</cite> containing the predicted ab
+channels.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="colorization.model.Model.restore">
+<code class="descname">restore</code><span class="sig-paren">(</span><em>checkpoint_path</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.model.Model.restore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize model weights from a training checkpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>checkpoint_path</strong> (<em>str</em>) – Path to the training checkpoint.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="colorization.model.Model.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>dataloader</em>, <em>iterations</em>, <em>checkpoint_init=None</em>, <em>checkpoint_dir=None</em>, <em>epochs_till_checkpoint=None</em><span class="sig-paren">)</span><a class="headerlink" href="#colorization.model.Model.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train the models network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataloader</strong> (<em>torch.utils.data.DataLoder</em>) – Data loader, should return Lab images of arbitrary shape and
+datatype float32. For efficient training, the data loader
+should be constructed with <cite>pin_memory</cite> set to <cite>True</cite>.</p></li>
+<li><p><strong>iterations</strong> (<em>int</em>) – Number of iterations (batches) to run the training for, note
+that training can be picked up at a previous checkpoint later
+on, also note that while training time is specified in
+iterations, checkpoint frequency is specified in epochs to
+avoid issues with data loader shuffling etc.</p></li>
+<li><p><strong>checkpoint_init</strong> (<em>str</em><em>, </em><em>optional</em>) – Previous checkpoint from which to pick up training.</p></li>
+<li><p><strong>checkpoint_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory in which to save checkpoints, must exist and be
+empty, is this is set to <cite>None</cite>, no checkpoints will be saved.</p></li>
+<li><p><strong>epochs_till_checkpoint</strong> (<em>str</em><em>, </em><em>optional</em>) – Number of epochs between checkpoints, only meaningful in
+combination with <cite>checkpoint_dir</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="data">
+<h1>data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data/index.html">image_file_or_directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data/index.html#module-colorization.data.tiny_image_net">tiny_image_net</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="modules">
+<h1>modules<a class="headerlink" href="#modules" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html">annealed_mean_decode_q</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html#module-colorization.modules.colorization_network">colorization_network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html#module-colorization.modules.conv2d_pad_same">conv2d_pad_same</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html#module-colorization.modules.cross_entropy_loss_2d">cross_entropy_loss_2d</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html#module-colorization.modules.encode_ab">encode_ab</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="util">
+<h1>util<a class="headerlink" href="#util" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="util/index.html">argparse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="util/index.html#module-colorization.util.image">image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="util/index.html#module-colorization.util.memory">memory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="util/index.html#module-colorization.util.resources">resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="util/index.html#module-colorization.util.timing">timing</a></li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="data/index.html" class="btn btn-neutral float-right" title="image_file_or_directory" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="colorization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Carolina Bianchi, Álvaro Orgaz Expósito, Timo Nicolai
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
