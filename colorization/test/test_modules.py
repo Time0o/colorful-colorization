@@ -7,9 +7,8 @@ import torch
 
 from colorization.cielab import DEFAULT_CIELAB
 from colorization.modules.cross_entropy_loss_2d import CrossEntropyLoss2d
-from colorization.modules.decode_q import DecodeQ
+from colorization.modules.annealed_mean_decode_q import AnnealedMeanDecodeQ
 from colorization.modules.encode_ab import EncodeAB
-from colorization.test.util import resource_path
 
 
 _SAMPLE_BATCH_SIZE = 32
@@ -17,7 +16,7 @@ _SAMPLE_HEIGHT = 100
 _SAMPLE_WIDTH = 200
 
 _ENCODE = EncodeAB(DEFAULT_CIELAB)
-_DECODE = DecodeQ(DEFAULT_CIELAB)
+_DECODE = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=0)
 
 _AB_SAFE_RANGE = np.arange(0, 80, 10, dtype=np.float32)
 
@@ -46,7 +45,7 @@ class EncodeABDecodeQCase(unittest.TestCase):
         ab = _random_ab()
 
         # encode and decode
-        ab_dec = _decode_q(_encode_ab(ab))
+        ab_dec = _decode_q(_encode_ab(ab.cuda())).cpu()
 
         self.assertTrue(torch.all(ab_dec == ab),
                         msg="decoding followed by encoding yields exact result")
@@ -64,6 +63,7 @@ class CrossEntropyLoss2dCase(unittest.TestCase):
         loss = CrossEntropyLoss2d()(q, q)
 
         self.assertEqual(0, loss, msg="cross entropy loss returns zero")
+
 
 if __name__ == '__main__':
     unittest.main()
