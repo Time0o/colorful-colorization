@@ -41,6 +41,15 @@ def _log_progress(log_config, logger, queue):
 
 
 class Model:
+    """ Top-level wrapper class implementing training and prediction.
+
+    This is a wrapper class that composes a PyTorch network with a loss
+    function and an optimizer and implements training, prediction,
+    checkpointing and logging functionality. Its implementation is kept
+    independent of the concrete underlying network.
+
+    """
+
     CHECKPOINT_PREFIX = 'checkpoint'
     CHECKPOINT_POSTFIX = 'tar'
     CHECKPOINT_ID_FMT = '{:010}'
@@ -51,6 +60,36 @@ class Model:
                  optimizer=None,
                  log_config=None,
                  logger=None):
+        """
+        Compose a model.
+
+        Note:
+            The model is not trainable unless both `loss` and `optimizer` are
+            not `None`. A non-trainable model can still be initialized from
+            pretrained weights for evaluation or prediction purposes.
+
+            Likewise, logging will only be enabled if both `log_config` and
+            `logger` are not `None`.
+
+        Args:
+            network (colorization.modules.ColorizationNetwork):
+                Network instance.
+            loss (torch.nn.Module, optional):
+                Training loss function, if this is set to `None`, the model is
+                not trainable.
+            optimizer (torch.optim.Optimizer, optional):
+                Training optimizer, if this is set to `None`, the model is not
+                trainable.
+            log_config (dict, optional):
+                Python `logging` configuration dictionary, if this is set to
+                `None`, logging will be disabled.
+            logger (str, optional):
+                Name of the logger to be utilized (this logger has to be
+                configured by `log_config`, pre-existing loggers will not
+                function correctly since logging is performed in a separate
+                thread).
+
+        """
 
         self.network = network
         self.loss = loss
@@ -66,14 +105,42 @@ class Model:
     def train(self,
               dataloader,
               iterations,
-              epoch_init=None,
+              checkpoint_init=None,
               checkpoint_dir=None,
               epochs_till_checkpoint=None):
+        """Train the models network.
+
+        Args:
+            dataloader (torch.utils.data.DataLoder):
+                Data loader, should return Lab images of arbitrary shape and
+                datatype float32. For efficient training, the data loader
+                should be constructed with `pin_memory` set to `True`.
+            iterations (int):
+                Number of iterations (batches) to run the training for, note
+                that training can be picked up at a previous checkpoint later
+                on, also note that while training time is specified in
+                iterations, checkpoint frequency is specified in epochs to
+                avoid issues with data loader shuffling etc.
+            checkpoint_init (str, optional):
+                Previous checkpoint from which to pick up training.
+            checkpoint_dir (str, optional):
+                Directory in which to save checkpoints, must exist and be
+                empty, is this is set to `None`, no checkpoints will be saved.
+            epochs_till_checkpoint (str, optional):
+                Number of epochs between checkpoints, only meaningful in
+                combination with `checkpoint_dir`.
+
+        """
+
+        # restore from checkpoint
+        if checkpoint_init is not None:
+            self._load_checkpoint(checkpoint_init, load_optimizer=True)
+            epoch_init = self._checkpoint_epoch(checkpoint_init)
 
         # validate checkpoint directory
         if checkpoint_dir is not None:
-            self._validate_checkpoint_dir(checkpoint_dir,
-                                          resuming=(epoch_init is not None))
+            self._validate_checkpoint_dir(
+                checkpoint_dir, resuming=(checkpoint_init is not None))
 
         # check whether dataloader has pin_memory set
         if not dataloader.pin_memory:
@@ -90,7 +157,7 @@ class Model:
             log.start()
 
         # optimization loop
-        if epoch_init is None:
+        if checkpoint_init is None:
             i = 1
             ep = 1
         else:
@@ -141,6 +208,20 @@ class Model:
             self.checkpoint_training(checkpoint_dir, 'final')
 
     def predict(self, img):
+        """Perform single batch prediction using the current network.
+
+        Args:
+            img (torch.Tensor):
+                A tensor of shape `(n, 1, h, w)` where `n` is the size of the
+                batch to be predicted and `h` and `w` are image dimensions. The
+                image should be the lightness channel of an image converted into
+                the Lab color space.
+
+        Returns:
+            A tensor of shape `(n, 1, h, w)` containing the predicted ab
+            channels.
+
+        """
         # switch to evaluation mode
         self.network.eval()
 
@@ -153,52 +234,36 @@ class Model:
 
         return img_pred
 
-    def save(self, path):
-        torch.save(self.network.state_dict(), path)
+    def restore(self, checkpoint_path):
+        """Initialize model weights from a training checkpoint.
 
-    def load(self, path):
-        self.network.load_state_dict(torch.load(path)['network'])
+        Args:
+            checkpoint_path (str):
+                Path to the training checkpoint.
 
-    def checkpoint_training(self, checkpoint_dir, checkpoint_epoch):
-        state = {
-            'network': self.network.state_dict(),
-            'optimizer': self.optimizer.state_dict()
-        }
+        """
 
-        path = self._checkpoint_path(checkpoint_dir, checkpoint_epoch)
-
-        torch.save(state, path)
-
-        self.logger.info("saved checkpoint '{}'".format(os.path.basename(path)))
-
-    def restore_training(self, checkpoint_dir, checkpoint_epoch=None):
-        # load checkpoint
-        if checkpoint_epoch is not None:
-            checkpoint_path = self._checkpoint_path(checkpoint_dir,
-                                                    checkpoint_epoch)
-
-            if not os.path.exists(path):
-                raise ValueError("failed to find checkpoint '{}'".format(path))
-        else:
-            # skip the final checkpoint here because it might not correspond to
-            # the end of an epoch
-            checkpoint_path, checkpoint_epoch = \
-                self.find_latest_checkpoint(checkpoint_dir, skip_final=True)
-
-        # load checkpoint
-        state = torch.load(checkpoint_path)
-
-        # load network weights
-        self.network.load_state_dict(state['network'])
-
-        # load optimizer state
-        self.optimizer.load_state_dict(state['optimizer'])
-
-        # return checkpoint epoch
-        return checkpoint_epoch
+        self._load_checkpoint(checkpoint_path)
 
     @classmethod
     def find_latest_checkpoint(cls, checkpoint_dir, skip_final=False):
+        """Find the most up to date checkpoint file in a checkpoint directory.
+
+        Args:
+            checkpoint_dir (str):
+                Directory in which to search for checkpoints, must exist.
+            skip_final (bool):
+                If `True` don't consider the checkpoint created after the final
+                training iteration. This is sensible if the returned checkpoint
+                will be be used to resume training since training can only be
+                resumed from checkpoints created at the end of an epoch.
+
+        Returns:
+            The file path to the latest checkpoint as well as the epoch at which
+            that checkpoint was created in a tuple.
+
+        """
+
         # create list of all checkpoints
         checkpoint_template = '{}_*.{}'.format(cls.CHECKPOINT_PREFIX,
                                                cls.CHECKPOINT_POSTFIX)
@@ -223,17 +288,27 @@ class Model:
             else:
                 break
 
-        # deduce checkpoint epoch from filename
-        if is_final:
-            return checkpoint_path, 'final'
-        else:
-            checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
+        return checkpoint_path
 
-            m = re.match(checkpoint_regex, checkpoint_path)
+    def _checkpoint_training(self, checkpoint_dir, checkpoint_epoch):
+        state = {
+            'network': self.network.state_dict(),
+            'optimizer': self.optimizer.state_dict()
+        }
 
-            checkpoint_epoch = int(m.group(1))
+        path = self._checkpoint_path(checkpoint_dir, checkpoint_epoch)
 
-            return checkpoint_path, checkpoint_epoch
+        torch.save(state, path)
+
+        self.logger.info("saved checkpoint '{}'".format(os.path.basename(path)))
+
+    def _load_checkpoint(self, checkpoint_path, load_optimizer=False):
+        state =  torch.load(checkpoint_path)
+
+        self.network.load_state_dict(state['network'])
+
+        if load_optimizer:
+            self.optimizer.load_state_dict(state['optimizer'])
 
     @staticmethod
     def _validate_checkpoint_dir(checkpoint_dir, resuming=False):
@@ -260,3 +335,16 @@ class Model:
                                        cls.CHECKPOINT_POSTFIX)
 
         return os.path.join(checkpoint_dir, checkpoint)
+
+    @staticmethod
+    def _checkpoint_epoch(checkpoint_path):
+        if checkpoint_path.find('final') != -1:
+            return 'final'
+
+        checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
+
+        m = re.match(checkpoint_regex, checkpoint_path)
+
+        checkpoint_epoch = int(m.group(1))
+
+        return checkpoint_epoch
