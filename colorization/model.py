@@ -115,7 +115,7 @@ class Model:
                 self.optimizer.step()
 
                 # display progress
-                log_queue.put(_LogData(i, iterations, loss.data))
+                log_queue.put(_LogData(i, iterations, loss.item()))
 
                 # increment iteration counter
                 i += 1
