@@ -135,8 +135,9 @@ if __name__ == '__main__':
 
         # assemble color image and transform to RGB colorspace
         img_out = np.dstack((l_out, ab_out))
-        img_out_rgb = lab_to_rgb(img_out)
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
+
+            img_out_rgb = lab_to_rgb(img_out)
             io.imsave(args.output_image, img_out_rgb)
