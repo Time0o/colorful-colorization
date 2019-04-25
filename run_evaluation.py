@@ -130,9 +130,6 @@ if __name__ == '__main__':
         l_out = torch_to_numpy(l_in)
         ab_out = torch_to_numpy(model.predict(img[:, :1, :, :]))
 
-        # scale output
-        ab_out = resize(ab_out, l_out.shape[:2])
-
         # assemble color image and transform to RGB colorspace
         img_out = np.dstack((l_out, ab_out))
 

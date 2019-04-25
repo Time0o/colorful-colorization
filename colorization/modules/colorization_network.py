@@ -115,7 +115,9 @@ class ColorizationNetwork(nn.Module):
         })
 
     def forward(self, img):
-        if img.shape[2] != self.INPUT_SIZE or img.shape[3] != self.INPUT_SIZE:
+        shape_orig = img.shape[2:]
+
+        if shape_orig != (self.INPUT_SIZE,) * 2:
             img = F.interpolate(img, size=self.INPUT_SIZE)
 
         if self.training:
@@ -139,6 +141,7 @@ class ColorizationNetwork(nn.Module):
             return q_pred, q_actual
         else:
             ab_pred = self.decode_q(q_pred)
+            ab_pred = F.interpolate(ab_pred, size=shape_orig)
 
             return ab_pred
 
