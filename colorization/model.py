@@ -75,6 +75,10 @@ class Model:
             self._validate_checkpoint_dir(checkpoint_dir,
                                           resuming=(epoch_init is not None))
 
+        # check whether dataloader has pin_memory set
+        if not dataloader.pin_memory:
+            warn("'pin_memory' not set, this will slow down training")
+
         # switch to training mode (essential for batch normalization)
         self.network.train()
 
@@ -98,7 +102,8 @@ class Model:
         while not done:
             for img in dataloader:
                 # move data to device
-                img = img.cuda()
+                if dataloader.pin_memory:
+                    img = img.cuda(non_blocking=True)
 
                 # perform parameter update
                 self.optimizer.zero_grad()
