@@ -46,4 +46,4 @@ class SoftEncodeAB:
     def _gauss_eval(x, mu, sigma):
         norm = 1 / (2 * math.pi * sigma)
 
-        return norm * torch.exp(-torch.sum((x - mu)**2, dim=0) / (2 * sigma))
+        return norm * torch.exp(-torch.sum((x - mu)**2, dim=0) / (2 * sigma**2))
