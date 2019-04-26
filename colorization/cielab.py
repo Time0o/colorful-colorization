@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skimage import color
 
-from .util.image import rgb_to_lab
+from .util.image import lab_to_rgb, rgb_to_lab
 from .util.resources import get_resource_path
 
 
@@ -116,9 +116,10 @@ class CIELAB:
         ax.set_ylabel("$a$")
 
         # minor ticks
+        tick_min_minor = cls.AB_RANGE[0]
+        tick_max_minor = cls.AB_RANGE[1]
+
         if pixel_borders:
-            tick_min_minor = cls.AB_RANGE[0]
-            tick_max_minor = cls.AB_RANGE[1]
 
             ax.set_xticks(
                 np.linspace(tick_min_minor, tick_max_minor, mat.shape[1] + 1),
@@ -175,7 +176,7 @@ class CIELAB:
         color_space_rgb = lab_to_rgb(color_space_lab)
 
         # mask out of gamut colors
-        color_space_rgb[~self.ab_gamut_mask, :] = 1
+        color_space_rgb[~self.ab_gamut_mask, :] = 255
 
         # display color space
         self._plot_ab_matrix(color_space_rgb,
@@ -187,7 +188,9 @@ class CIELAB:
         # accumulate ab values
         ab_acc = np.zeros([self.AB_RANGE[1] - self.AB_RANGE[0]] * 2)
 
-        for i, img in enumerate(dataset):
+        for i in range(len(dataset)):
+            img = dataset[i]
+
             if verbose:
                 fmt = "\rprocessing image {}/{}"
 
