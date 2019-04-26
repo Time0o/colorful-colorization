@@ -8,17 +8,17 @@ import torch
 from colorization.cielab import DEFAULT_CIELAB
 from colorization.modules.cross_entropy_loss_2d import CrossEntropyLoss2d
 from colorization.modules.annealed_mean_decode_q import AnnealedMeanDecodeQ
-from colorization.modules.encode_ab import EncodeAB
+from colorization.modules.soft_encode_ab import SoftEncodeAB
 
 
 _SAMPLE_BATCH_SIZE = 32
 _SAMPLE_HEIGHT = 100
 _SAMPLE_WIDTH = 200
 
-_ENCODE = EncodeAB(DEFAULT_CIELAB)
+_ENCODE = SoftEncodeAB(DEFAULT_CIELAB)
 _DECODE = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=0)
 
-_AB_SAFE_RANGE = np.arange(0, 80, 10, dtype=np.float32)
+_AB_SAFE_RANGE = np.arange(0, 80, 1, dtype=np.float32)
 
 
 def _random_ab(seed=0):
@@ -39,25 +39,13 @@ def _decode_q(q):
     return _DECODE(q)
 
 
-class EncodeABDecodeQCase(unittest.TestCase):
-    def test_identity_mapping(self):
-        # construct random (valid) ab values
-        ab = _random_ab()
-
-        # encode and decode
-        ab_dec = _decode_q(_encode_ab(ab.cuda())).cpu()
-
-        self.assertTrue(torch.all(ab_dec == ab),
-                        msg="decoding followed by encoding yields exact result")
-
-
 class CrossEntropyLoss2dCase(unittest.TestCase):
     def test_zero_loss(self):
         # construct random (valid) ab values
         ab = _random_ab()
 
         # scale q so that softmax will return one hot values
-        q = _encode_ab(ab) * 1000
+        q = _encode_ab(ab.cuda()).cpu() * 1000
 
         # check if loss is zero
         loss = CrossEntropyLoss2d()(q, q)

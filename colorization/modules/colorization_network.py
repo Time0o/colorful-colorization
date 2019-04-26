@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from ..cielab import ABGamut, CIELAB, DEFAULT_CIELAB
 from .conv2d_pad_same import Conv2dPadSame
 from .annealed_mean_decode_q import AnnealedMeanDecodeQ
-from .encode_ab import EncodeAB
+from .soft_encode_ab import SoftEncodeAB
 
 
 _CAFFE_LAYER_NAME_MAPPING = {
@@ -67,7 +67,7 @@ class ColorizationNetwork(nn.Module):
         ]
 
         # label transformation
-        self.encode_ab = EncodeAB(DEFAULT_CIELAB)
+        self.encode_ab = SoftEncodeAB(DEFAULT_CIELAB)
         self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=annealed_mean_T)
 
         # move to device
