@@ -11,12 +11,12 @@ import torch.nn.functional as F
 from ..cielab import ABGamut, CIELAB, DEFAULT_CIELAB
 from .conv2d_pad_same import Conv2dPadSame
 from .annealed_mean_decode_q import AnnealedMeanDecodeQ
-from .encode_ab import EncodeAB
+from .soft_encode_ab import SoftEncodeAB
 
 
 _CAFFE_LAYER_NAME_MAPPING = {
     'conv1_1': 'bw_conv1_1',
-    'classify': 'conv8_313'
+    'conv9_1': 'conv8_313'
 }
 
 
@@ -45,14 +45,16 @@ class ColorizationNetwork(nn.Module):
             batchnorm=False
         )
 
-        self.classify = self._create_block(
-            'classify',
+        self.conv9 = self._create_block(
+            'conv9',
             (1, 256, ABGamut.EXPECTED_SIZE),
             kernel_sizes=[1],
             strides=[1],
             batchnorm=False,
             activations=False
         )
+
+        self.log_softmax = nn.LogSoftmax(dim=1)
 
         self._blocks = [
             self.conv1,
@@ -63,11 +65,12 @@ class ColorizationNetwork(nn.Module):
             self.conv6,
             self.conv7,
             self.conv8,
-            self.classify
+            self.conv9,
+            self.log_softmax
         ]
 
         # label transformation
-        self.encode_ab = EncodeAB(DEFAULT_CIELAB)
+        self.encode_ab = SoftEncodeAB(DEFAULT_CIELAB)
         self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=annealed_mean_T)
 
         # move to device
@@ -140,6 +143,7 @@ class ColorizationNetwork(nn.Module):
 
             return q_pred, q_actual
         else:
+
             ab_pred = self.decode_q(q_pred)
             ab_pred = F.interpolate(ab_pred, size=shape_orig)
 
@@ -176,10 +180,7 @@ class ColorizationNetwork(nn.Module):
                 dilation=dilation,
                 activation=activations)
 
-            if block_depth == 1:
-                layer_name = name
-            else:
-                layer_name = '{}_{}'.format(name, i + 1)
+            layer_name = '{}_{}'.format(name, i + 1)
 
             block.add_module(layer_name, layer)
 

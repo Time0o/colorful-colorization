@@ -13,5 +13,5 @@ dependencies:
     - numpy
     - psutil
     - pycuda
-    - pytorch >= 1.0.1
+    - pytorch-nightly
     - scikit-image
