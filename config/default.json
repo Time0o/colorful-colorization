@@ -24,7 +24,8 @@
         }
     },
     "network_args": {
-        "annealed_mean_T": 0.318
+        "annealed_mean_T": 0.318,
+        "class_rebal_lambda": 0.5
     },
     "model_args": {
         "logger": "training_logger"

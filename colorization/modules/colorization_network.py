@@ -9,8 +9,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..cielab import ABGamut, CIELAB, DEFAULT_CIELAB
-from .conv2d_pad_same import Conv2dPadSame
 from .annealed_mean_decode_q import AnnealedMeanDecodeQ
+from .conv2d_pad_same import Conv2dPadSame
+from .get_class_weights import GetClassWeights
+from .rebalance_loss import RebalanceLoss
 from .soft_encode_ab import SoftEncodeAB
 
 
@@ -25,7 +27,7 @@ class ColorizationNetwork(nn.Module):
 
     DEFAULT_KERNEL_SIZE = 3
 
-    def __init__(self, annealed_mean_T=0):
+    def __init__(self, annealed_mean_T=0, class_rebal_lambda=None):
         super().__init__()
 
         # prediction
@@ -66,9 +68,18 @@ class ColorizationNetwork(nn.Module):
             self.conv9
         ]
 
-        # label transformation
+        # en-/decoding
         self.encode_ab = SoftEncodeAB(DEFAULT_CIELAB)
         self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=annealed_mean_T)
+
+        # rebalancing
+        self.class_rebal_lambda = class_rebal_lambda
+
+        if class_rebal_lambda is not None:
+            self.get_class_weights = GetClassWeights(
+                DEFAULT_CIELAB, lambda_=class_rebal_lambda)
+
+            self.rebalance_loss = RebalanceLoss.apply
 
         # move to device
         self.cuda()
@@ -135,8 +146,14 @@ class ColorizationNetwork(nn.Module):
 
         # label transformation
         if self.training:
+            # downsample and encode labels
             ab = F.interpolate(ab, size=q_pred.shape[2:])
             q_actual = self.encode_ab(ab)
+
+            # rebalancing
+            if self.class_rebal_lambda is not None:
+                color_weights = self.get_class_weights(q_actual)
+                q_pred = self.rebalance_loss(q_pred, color_weights)
 
             return q_pred, q_actual
         else:
