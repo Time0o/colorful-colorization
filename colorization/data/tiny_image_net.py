@@ -6,7 +6,7 @@ import numpy as np
 from skimage import io
 from torch.utils.data.dataset import Dataset
 
-from ..util.image import rgb_to_lab
+from ..util.image import resize, rgb_to_lab
 
 
 class TinyImageNet(Dataset):
@@ -25,21 +25,22 @@ class TinyImageNet(Dataset):
                  dataset=DATASET_TRAIN,
                  limit=None,
                  clean=CLEAN_ASSUME,
+                 image_size=None,
                  transform=None):
 
         self.root = root
         self.dataset = dataset
         self.limit = limit
+        self.image_size = image_size
         self.transform = transform
 
         self._build_indices()
         self._clean(clean)
 
     def __getitem__(self, index):
-        image_path = self._indices[self.dataset][index]
-        img = io.imread(image_path)
+        path = self._indices[self.dataset][index]
 
-        return self._process_image(img)
+        return self._load_and_process_image(path)
 
     def __len__(self):
         l = len(self._indices[self.dataset])
@@ -116,11 +117,16 @@ class TinyImageNet(Dataset):
 
             self._indices[dataset] = index_rgb_only
 
-    def _process_image(self, img):
-        img = rgb_to_lab(img).astype(self.DTYPE)
+    def _load_and_process_image(self, path):
+        img = rgb_to_lab(io.imread(path))
+
+        if self.image_size is not None:
+            img = resize(img, self.image_size)
 
         if self.transform:
             img = self.transform(img)
+
+        img = img.astype(self.DTYPE)
 
         return np.moveaxis(img, -1, 0)
 

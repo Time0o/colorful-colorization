@@ -142,9 +142,11 @@ class Model:
             self._validate_checkpoint_dir(
                 checkpoint_dir, resuming=(checkpoint_init is not None))
 
-        # check whether dataloader has pin_memory set
+        # check whether dataloader has pin_memory set and set image size
         if not dataloader.pin_memory:
             warn("'pin_memory' not set, this will slow down training")
+
+        dataloader.dataset.image_size = (self.network.INPUT_SIZE,) * 2
 
         # switch to training mode (essential for batch normalization)
         self.network.train()

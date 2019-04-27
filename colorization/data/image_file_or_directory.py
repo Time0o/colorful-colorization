@@ -4,7 +4,7 @@ import numpy as np
 from skimage import io
 from torch.utils.data.dataset import Dataset
 
-from ..util.image import rgb_to_lab
+from ..util.image import resize, rgb_to_lab
 
 
 class ImageFileOrDirectory(Dataset):
@@ -13,7 +13,11 @@ class ImageFileOrDirectory(Dataset):
 
     DTYPE = np.float32
 
-    def __init__(self, file_or_root, transform=None):
+    def __init__(self,
+                 file_or_root,
+                 image_size=None,
+                 transform=None):
+
         if not os.path.exists(file_or_root):
             raise ValueError("'{}' does not exist".format(file_or_root))
 
@@ -25,6 +29,7 @@ class ImageFileOrDirectory(Dataset):
             self.mode = self.MODE_FILE
             self.file = file_or_root
 
+        self.image_size = image_size
         self.transform = transform
 
     def __getitem__(self, index):
@@ -41,9 +46,14 @@ class ImageFileOrDirectory(Dataset):
             return 1
 
     def _load_and_process_image(self, path):
-        img = rgb_to_lab(io.imread(path)).astype(self.DTYPE)
+        img = rgb_to_lab(io.imread(path))
+
+        if self.image_size is not None:
+            img = resize(img, self.image_size)
 
         if self.transform:
             img = self.transform(img)
+
+        img = img.astype(self.DTYPE)
 
         return np.moveaxis(img, -1, 0)
