@@ -63,7 +63,8 @@ if __name__ == '__main__':
         err = "--init-proto and --init-model must be specified together"
         raise ValueError(err)
 
-    model.network.init_from_caffe(args.init_proto, args.init_model)
+    if args.init_proto is not None:
+        model.network.init_from_caffe(args.init_proto, args.init_model)
 
     # run training
     model.train(dataloader, **cfg['training_args'])
