@@ -12,6 +12,8 @@ USAGE = \
 """run_training.py [-h|--help]
                        --config CONFIG
                        [--default-config CONFIG]
+                       [--init-proto PROTOTXT]
+                       [--init-model CAFFEMODEL]
                        [--random-seed SEED]"""
 
 
@@ -27,6 +29,14 @@ if __name__ == '__main__':
     parser.add_argument('--default-config',
                         metavar='CONFIG',
                         help="training default configuration JSON file")
+
+    parser.add_argument('--init-proto',
+                        metavar='PROTOTXT',
+                        help="weight init Caffe prototxt file")
+
+    parser.add_argument('--init-model',
+                        metavar='CAFFEMODEL',
+                        help="weight init Caffe caffemodel file")
 
     parser.add_argument('--random-seed',
                         metavar='SEED',
@@ -47,6 +57,13 @@ if __name__ == '__main__':
 
     # create model
     model = config.model_from_config(cfg)
+
+    # initialize model
+    if (args.init_proto is None) != (args.init_model is None):
+        err = "--init-proto and --init-model must be specified together"
+        raise ValueError(err)
+
+    model.network.init_from_caffe(args.init_proto, args.init_model)
 
     # run training
     model.train(dataloader, **cfg['training_args'])
