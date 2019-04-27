@@ -11,24 +11,18 @@ from .util.resources import get_resource_path
 
 
 class ABGamut:
-    DEFAULT_RESOURCE = get_resource_path('ab-gamut.npy')
+    RESOURCE_POINTS = get_resource_path('ab-gamut.npy')
+    RESOURCE_PRIOR = get_resource_path('q-prior.npy')
 
+    DTYPE = np.float32
     EXPECTED_SIZE = 313
 
-    def __init__(self, points=None):
-        if points is not None:
-            self.points = points
-        else:
-            self.points = self.points_from_file(self.DEFAULT_RESOURCE)
+    def __init__(self):
+        self.points = np.load(self.RESOURCE_POINTS).astype(self.DTYPE)
+        self.prior = np.load(self.RESOURCE_PRIOR).astype(self.DTYPE)
 
-    @classmethod
-    def points_from_file(cls, path):
-        points = np.load(path)
-
-        assert points.shape[0] == cls.EXPECTED_SIZE
-        assert points.shape[1] == 2
-
-        return points
+        assert self.points.shape == (self.EXPECTED_SIZE, 2)
+        assert self.prior.shape == (self.EXPECTED_SIZE,)
 
 
 class CIELAB:
