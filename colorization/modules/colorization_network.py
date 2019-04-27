@@ -54,8 +54,6 @@ class ColorizationNetwork(nn.Module):
             activations=False
         )
 
-        self.log_softmax = nn.LogSoftmax(dim=1)
-
         self._blocks = [
             self.conv1,
             self.conv2,
@@ -65,8 +63,7 @@ class ColorizationNetwork(nn.Module):
             self.conv6,
             self.conv7,
             self.conv8,
-            self.conv9,
-            self.log_softmax
+            self.conv9
         ]
 
         # label transformation
@@ -121,10 +118,7 @@ class ColorizationNetwork(nn.Module):
         })
 
     def forward(self, img):
-        shape_orig = img.shape[2:]
-
-        if shape_orig != (self.INPUT_SIZE,) * 2:
-            img = F.interpolate(img, size=self.INPUT_SIZE)
+        assert img.shape[2:] == (self.INPUT_SIZE,) * 2
 
         if self.training:
             l, ab = img[:, :1, :, :], img[:, 1:, :, :]
@@ -146,9 +140,7 @@ class ColorizationNetwork(nn.Module):
 
             return q_pred, q_actual
         else:
-
             ab_pred = self.decode_q(q_pred)
-            ab_pred = F.interpolate(ab_pred, size=shape_orig)
 
             return ab_pred
 

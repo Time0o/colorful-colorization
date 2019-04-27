@@ -2,17 +2,15 @@
 
 import argparse
 import os
-import warnings
 from glob import glob
 
 import numpy as np
-from skimage import color, io
-from torch.utils.data import DataLoader
+from skimage import io
 
 import colorization.config as config
-from colorization.data.image_file_or_directory import ImageFileOrDirectory
 from colorization.util.argparse import nice_help_formatter
-from colorization.util.image import lab_to_rgb, resize, torch_to_numpy
+from colorization.util.image import \
+    lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
 
 
 USAGE = \
@@ -47,8 +45,7 @@ if __name__ == '__main__':
                         required=True,
                         metavar='IMAGE',
                         help=str("location to which predicted color image is "
-                                 "to be written, only meaningful in "
-                                 "combination with --input-image"))
+                                 "to be written"))
 
     parser.add_argument('--pretrain-proto',
                         metavar='PROTOTXT',
@@ -71,16 +68,6 @@ if __name__ == '__main__':
                                  "is used to perform prediction"))
 
     args = parser.parse_args()
-
-    # create dataset
-    if args.input_image is not None:
-        if args.output_image is None:
-            err = "--input-image and --output-image must be specified together"
-            raise ValueError(err)
-
-        dataset = ImageFileOrDirectory(args.input_image)
-
-    dataloader = DataLoader(dataset)
 
     # load configuration file(s)
     cfg = config.get_config(args.config)
@@ -121,20 +108,22 @@ if __name__ == '__main__':
 
         model.load(checkpoint_path)
 
+    # load input image
+    img_rgb = io.imread(args.input_image)
+    img_rgb_resized = resize(img_rgb, (model.network.INPUT_SIZE,) * 2)
+
+    h_orig, w_orig, _ = img_rgb.shape
+
+    # convert colorspace
+    img_lab = rgb_to_lab(img_rgb)
+    img_lab_resized = rgb_to_lab(img_rgb_resized)
+
     # run prediction
-    for img in dataloader:
-        # extract lightness channel
-        l_in = img[:, :1, :, :]
+    l_batch = numpy_to_torch(img_lab_resized[:, :, :1])
+    ab_pred = torch_to_numpy(model.predict(l_batch))
 
-        # run prediction
-        l_out = torch_to_numpy(l_in)
-        ab_out = torch_to_numpy(model.predict(img[:, :1, :, :]))
+    # assemble and save
+    img_lab_pred = np.dstack(
+        (img_lab[:, :, :1], resize(ab_pred, (h_orig, w_orig))))
 
-        # assemble color image and transform to RGB colorspace
-        img_out = np.dstack((l_out, ab_out))
-
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-
-            img_out_rgb = lab_to_rgb(img_out)
-            io.imsave(args.output_image, img_out_rgb)
+    io.imsave(args.output_image, lab_to_rgb(img_lab_pred))

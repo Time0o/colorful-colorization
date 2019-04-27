@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from skimage import color, transform
 
 
@@ -11,6 +12,14 @@ def lab_to_rgb(img):
     img_uint8 = (255 * img_float).astype(np.uint8)
 
     return img_uint8
+
+
+def numpy_to_torch(img):
+    h, w, c = img.shape
+
+    tensor = torch.from_numpy(np.moveaxis(img, -1, 0).reshape(1, c, h, w))
+
+    return tensor.type(torch.float32)
 
 
 def torch_to_numpy(batch):
