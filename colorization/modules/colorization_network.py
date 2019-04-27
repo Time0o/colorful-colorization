@@ -107,6 +107,9 @@ class ColorizationNetwork(nn.Module):
             elif layer_type == 'batchnorm':
                 norm = state_dict[param] = caffe_layers[layer][2]
 
+                if norm == 0:
+                    norm = 1
+
                 if param_type == 'running_mean':
                     state_dict[param] = caffe_layers[layer][0] / norm
                 elif param_type == 'running_var':
