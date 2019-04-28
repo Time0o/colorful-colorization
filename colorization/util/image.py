@@ -75,6 +75,9 @@ class ImageSet:
         return len(self._images)
 
     def __getitem__(self, i):
+        if isinstance(i, slice):
+            return self.__class__(self._images[i], lazy=self._lazy)
+
         if self._lazy:
             return Image.load(self._images[i])
         else:
