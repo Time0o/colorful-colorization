@@ -8,8 +8,7 @@ import numpy as np
 
 import colorization.config as config
 from colorization.util.argparse import nice_help_formatter
-from colorization.util.image import \
-    imread, imsave, lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
+from colorization.util.image import Image
 
 
 USAGE = \
@@ -32,28 +31,9 @@ def _err(msg):
 
 
 def _predict_image(input_image, input_size, output_image):
-    # load input image
-    img_rgb = imread(input_image)
-    img_rgb_resized = resize(img_rgb, (input_size,) * 2)
-
-    h_orig, w_orig, _ = img_rgb.shape
-
-    # convert colorspace
-    img_lab = rgb_to_lab(img_rgb)
-    img_lab_resized = rgb_to_lab(img_rgb_resized)
-
-    # run prediction
-    l_batch = numpy_to_torch(img_lab_resized[:, :, :1])
-    ab_pred = torch_to_numpy(model.predict(l_batch))
-
-    # assemble and save
-    img_lab_pred = np.dstack(
-        (img_lab[:, :, :1], resize(ab_pred, (h_orig, w_orig))))
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-
-        imsave(output_image, lab_to_rgb(img_lab_pred))
+    img = Image.load(input_image)
+    img_pred = img.predict(model, input_size)
+    img_pred.save(output_image)
 
 
 if __name__ == '__main__':

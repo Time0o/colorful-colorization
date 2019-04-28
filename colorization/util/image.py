@@ -1,6 +1,84 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import warnings
 from skimage import color, io, transform
+
+
+class Image:
+    def __init__(self, img_rgb, img_lab=None):
+        self._img_rgb = img_rgb
+
+        if img_lab is not None:
+            self._img_lab = img_lab
+        else:
+            self._img_lab = rgb_to_lab(img_rgb)
+
+    @classmethod
+    def load(cls, path):
+        return cls(imread(path))
+
+    def save(self, path):
+        imsave(path, self._img_rgb)
+
+    def get(self, colorspace='rgb'):
+        if colorspace == 'rgb':
+            return self._img_rgb
+        elif colorspace == 'lab':
+            return self._img_lab
+        else:
+            raise ValueError("invalid colorspace")
+
+    def show(self, ax=None):
+        if ax is None:
+            _, ax = plt.subplots()
+
+        ax.imshow(self._img_rgb)
+
+        ax.axis('off')
+
+    def predict(self, model, input_size):
+        img_rgb_resized = resize(self._img_rgb, (input_size,) * 2)
+        img_lab_resized = rgb_to_lab(img_rgb_resized)
+
+        l_batch = numpy_to_torch(img_lab_resized[:, :, :1])
+        ab_pred = torch_to_numpy(model.predict(l_batch))
+        ab_pred_resized = resize(ab_pred, self._img_rgb.shape[:2])
+
+        img_lab = np.dstack((self._img_lab[:, :, :1], ab_pred_resized))
+        img_rgb = lab_to_rgb(img_lab)
+
+        return self.__class__(img_rgb, img_lab)
+
+
+class ImageSet:
+    def __init__(self, images, lazy=False):
+        self._images = images
+        self._lazy = lazy
+
+    @classmethod
+    def from_directory(cls, root):
+        if not os.path.isdir(root):
+            raise ValueError("not a directory: '{}'".format(root))
+
+        files = [os.path.join(root, f) for f in sorted(os.listdir(root))]
+
+        return cls(files, lazy=True)
+
+    @classmethod
+    def from_paths(cls, paths):
+        return cls(paths, lazy=True)
+
+    def __len__(self):
+        return len(self._images)
+
+    def __getitem__(self, i):
+        if self._lazy:
+            return Image.load(self._images[i])
+        else:
+            self._images[i]
 
 
 def rgb_to_lab(img):
@@ -8,10 +86,13 @@ def rgb_to_lab(img):
 
 
 def lab_to_rgb(img):
-    img_float = np.clip(color.lab2rgb(img), 0, 1)
-    img_uint8 = (255 * img_float).astype(np.uint8)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
 
-    return img_uint8
+        img_float = np.clip(color.lab2rgb(img), 0, 1)
+        img_uint8 = (255 * img_float).astype(np.uint8)
+
+        return img_uint8
 
 
 def numpy_to_torch(img):
@@ -40,4 +121,7 @@ def imsave(path, img):
     if np.issubdtype(img.dtype, np.floating):
         img = 255 * img
 
-    io.imsave(path, img.astype(np.uint8))
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+
+        io.imsave(path, img.astype(np.uint8))
