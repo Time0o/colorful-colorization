@@ -8,10 +8,6 @@ from functools import partial
 from importlib import import_module
 from typing import Dict, Generator, Tuple, Union
 
-from .model import Model
-from .modules.colorization_network import ColorizationNetwork
-from .modules.cross_entropy_loss_2d import CrossEntropyLoss2d
-
 
 # recursive dictionary operations
 

@@ -40,7 +40,7 @@ def _log_progress(log_config, logger, queue):
         logger.info(data)
 
 
-class Model:
+class ColorizationModel:
     """ Top-level wrapper class implementing training and prediction.
 
     This is a wrapper class that composes a PyTorch network with a loss
