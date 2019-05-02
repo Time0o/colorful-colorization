@@ -16,7 +16,7 @@ except RuntimeError:
     _mp_spawn = False
 
 
-class _LogData:
+class _LossLogData:
     def __init__(self, i, i_max, loss):
         self.i = i
         self.i_max = i_max
@@ -152,10 +152,13 @@ class Model:
 
         # create logging thread
         if self._log_enabled:
-            log_queue = SimpleQueue()
-            log = Process(target=_log_progress,
-                          args=(self._log_config, self._logger, log_queue))
-            log.start()
+            self._log_queue = SimpleQueue()
+
+            self._log = Process(
+                target=_log_progress,
+                args=(self._log_config, self._logger, self._log_queue))
+
+            self._log.start()
 
         # optimization loop
         if checkpoint_init is None:
@@ -165,7 +168,6 @@ class Model:
             i = len(dataloader) * (epoch_init - 1) + 1
             ep = epoch_init
 
-        log = None
         done = False
         while not done:
             for img in dataloader:
@@ -183,7 +185,9 @@ class Model:
                 self.optimizer.step()
 
                 # display progress
-                log_queue.put(_LogData(i, iterations, loss.item()))
+                if self._log_enabled:
+                    self._log_queue.put(
+                        _LossLogData(i, iterations, loss.item()))
 
                 # increment iteration counter
                 i += 1
@@ -196,17 +200,18 @@ class Model:
             if not done:
                 if checkpoint_dir is not None:
                     if ep % epochs_till_checkpoint == 0:
-                        self.checkpoint_training(checkpoint_dir, ep)
+                        self._checkpoint_training(checkpoint_dir, ep)
 
                 ep += 1
 
-        # stop logging thread
-        log_queue.put('done')
-        log.join()
-
         # save final checkpoint
         if checkpoint_dir is not None:
-            self.checkpoint_training(checkpoint_dir, 'final')
+            self._checkpoint_training(checkpoint_dir, 'final')
+
+        # stop logging thread
+        if self._log_enabled:
+            self._log_queue.put('done')
+            self._log.join()
 
     def predict(self, img):
         """Perform single batch prediction using the current network.
@@ -301,7 +306,9 @@ class Model:
 
         torch.save(state, path)
 
-        self.logger.info("saved checkpoint '{}'".format(os.path.basename(path)))
+        if self._log_enabled:
+            fmt = "saved checkpoint '{}'"
+            self._log_queue.put(fmt.format(os.path.basename(path)))
 
     def _load_checkpoint(self, checkpoint_path, load_optimizer=False):
         state =  torch.load(checkpoint_path)
