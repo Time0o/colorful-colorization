@@ -13,10 +13,12 @@ from colorization.util.argparse import nice_help_formatter
 
 USAGE = \
 """usage: prepare_dataset.py [-h|--help]
+                                 [--file-ext EXT]
                                  [--val-split VAL_SPLIT]
                                  [--test-split TEST_SPLIT]
-                                 [--shuffle]
-                                 [--create-lmdb LMDB_ROOT]
+                                 [--no-shuffle]
+                                 [--create-lmdb]
+                                 [--convert-imageset SCRIPT]
                                  DATA_DIR"""
 
 
@@ -29,23 +31,25 @@ if __name__ == '__main__':
                         help="data directory")
 
     parser.add_argument('--file-ext',
+                        metavar='EXT',
                         default='jpg',
-                        help="image file extension")
+                        help="image file extension (default: %(default)s)")
 
     parser.add_argument('--val-split',
                         type=int,
                         default=0.1,
-                        help="relative size of validation set")
+                        help=str("relative size of validation set (default: "
+                                 "%(default).1f)"))
 
     parser.add_argument('--test-split',
                         type=int,
                         default=0.1,
-                        help="relative size of test set")
+                        help=("relative size of test set (default: "
+                              "%(default).1f)"))
 
-    parser.add_argument('--shuffle',
+    parser.add_argument('--no-shuffle',
                         action='store_true',
-                        default=True,
-                        help="shuffle data samples prior to split")
+                        help="don't shuffle data samples prior to split")
 
     parser.add_argument('--resize-height',
                         type=int,
@@ -61,13 +65,14 @@ if __name__ == '__main__':
 
     parser.add_argument('--convert-imageset',
                         metavar='SCRIPT',
-                        help="create_imageset script location")
+                        help=str("create_imageset script location (required if "
+                                 "--create-lmdb is set"))
 
     args = parser.parse_args()
 
     data_all = glob(os.path.join(args.data_dir, '*.' + args.file_ext))
 
-    if args.shuffle:
+    if not args.no_shuffle:
         shuffle(data_all)
 
     num_val = int(args.val_split * len(data_all))
