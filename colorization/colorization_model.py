@@ -344,12 +344,13 @@ class ColorizationModel:
 
         return os.path.join(checkpoint_dir, checkpoint)
 
-    @staticmethod
-    def _checkpoint_epoch(checkpoint_path):
+    @classmethod
+    def _checkpoint_epoch(cls, checkpoint_path):
         if checkpoint_path.find('final') != -1:
             return 'final'
 
-        checkpoint_regex = checkpoint_template.replace('*', '(\\d+)')
+        checkpoint_regex = '{}_(\\d+).{}'.format(cls.CHECKPOINT_PREFIX,
+                                                 cls.CHECKPOINT_POSTFIX)
 
         m = re.match(checkpoint_regex, checkpoint_path)
 

@@ -68,9 +68,9 @@ def _flatten_data_dir(data_dir, purge, file_ext):
 
 
 def _purge_toplevel(data_dir, file_ext):
-    for f in os.listdir(datadir):
+    for f in os.listdir(data_dir):
         if not f.endswith('.' + file_ext):
-            os.remove(os.path.join(root, f))
+            os.remove(os.path.join(data_dir, f))
 
 
 def _split_dataset(data_dir,

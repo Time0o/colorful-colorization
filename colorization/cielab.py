@@ -1,12 +1,9 @@
-import os
 from functools import partial
-from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage import color
 
-from .util.image import lab_to_rgb, rgb_to_lab
+from .util.image import lab_to_rgb
 from .util.resources import get_resource_path
 
 

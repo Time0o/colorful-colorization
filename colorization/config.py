@@ -1,8 +1,5 @@
 import json
-import logging
-import logging.config
 import os
-import sys
 from collections import Mapping
 from functools import partial
 from importlib import import_module

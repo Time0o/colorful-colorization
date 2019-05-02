@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data.dataset import Dataset
 from torchvision.transforms import ToPILImage
 
-from ..util.image import imread, resize, rgb_to_lab
+from ..util.image import imread, rgb_to_lab
 
 
 class StandardDataset(Dataset):

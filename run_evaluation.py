@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
-from glob import glob
 
 import numpy as np
 

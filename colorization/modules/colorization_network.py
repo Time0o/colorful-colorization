@@ -3,7 +3,6 @@ from collections import OrderedDict
 from functools import partial
 
 import caffe
-import numpy as np
 import torch; torch.backends.cudnn.benchmark = True
 import torch.nn as nn
 import torch.nn.functional as F
