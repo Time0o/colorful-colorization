@@ -13,6 +13,8 @@ from colorization.util.argparse import nice_help_formatter
 
 USAGE = \
 """usage: prepare_dataset.py [-h|--help]
+                                 [--flatten]
+                                 [--purge]
                                  [--file-ext EXT]
                                  [--val-split VAL_SPLIT]
                                  [--test-split TEST_SPLIT]
@@ -22,6 +24,24 @@ USAGE = \
                                  DATA_DIR"""
 
 
+def _flatten_data_dir(data_dir, purge, file_ext):
+    for root, subdirs, files in os.walk(data_dir):
+        for f in files:
+            if f.endswith('.' + file_ext):
+                move(os.path.join(root, f), data_dir)
+            elif purge:
+                os.remove(os.path.join(root, f))
+
+        if not os.listdir(root):
+            os.removedirs(root)
+
+
+def _purge_toplevel(data_dir, file_ext):
+    for f in os.listdir(datadir):
+        if not f.endswith('.' + file_ext):
+            os.remove(os.path.join(root, f))
+
+
 if __name__ == '__main__':
     parser = ArgumentParser(formatter_class=nice_help_formatter(),
                             usage=USAGE)
@@ -29,6 +49,15 @@ if __name__ == '__main__':
     parser.add_argument('data_dir',
                         metavar='DATA_DIR',
                         help="data directory")
+
+    parser.add_argument('--flatten',
+                        action='store_true',
+                        help=str("recursively move images in data directory "
+                                 "to toplevel before performing split"))
+
+    parser.add_argument('--purge',
+                        action='store_true',
+                        help="remove non images before performing split")
 
     parser.add_argument('--file-ext',
                         metavar='EXT',
@@ -69,6 +98,11 @@ if __name__ == '__main__':
                                  "--create-lmdb is set"))
 
     args = parser.parse_args()
+
+    if args.flatten:
+        _flatten_data_dir(args.data_dir, args.purge, args.file_ext)
+    elif args.purge:
+        _purge_toplevel(args.data_dir, args.file_ext)
 
     data_all = glob(os.path.join(args.data_dir, '*.' + args.file_ext))
 
