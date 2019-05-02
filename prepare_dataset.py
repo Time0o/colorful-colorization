@@ -8,6 +8,8 @@ from random import shuffle
 from shutil import move
 from subprocess import CalledProcessError, check_call
 
+from colorization.util.argparse import nice_help_formatter
+
 
 USAGE = \
 """usage: prepare_dataset.py [-h|--help]
@@ -19,7 +21,8 @@ USAGE = \
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(usage=USAGE)
+    parser = ArgumentParser(formatter_class=nice_help_formatter(),
+                            usage=USAGE)
 
     parser.add_argument('data_dir',
                         metavar='DATA_DIR',
