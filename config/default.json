@@ -5,7 +5,23 @@
             "dataset": {
                 "type": "colorization.data.standard_dataset.StandardDataset",
                 "params": {
-                    "root": ["path", "../data/stanford_dogs"]
+                    "root": ["path", "../data/stanford_dogs"],
+                    "transform": {
+                        "type": "torchvision.transforms.Compose",
+                        "params": {
+                            "transforms": [
+                                {
+                                    "type": "torchvision.transforms.RandomCrop",
+                                    "params": {
+                                        "size": 176
+                                    }
+                                },
+                                {
+                                   "type": "torchvision.transforms.RandomHorizontalFlip"
+                                }
+                            ]
+                        }
+                    }
                 }
              },
             "batch_size": 40,
