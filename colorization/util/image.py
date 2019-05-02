@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from skimage import color, transform
+from skimage import color, io, transform
 
 
 def rgb_to_lab(img):
@@ -30,3 +30,14 @@ def torch_to_numpy(batch):
 
 def resize(img, size):
     return transform.resize(img, size, mode='reflect', anti_aliasing=True)
+
+
+def imread(path):
+    return io.imread(path)
+
+
+def imsave(path, img):
+    if np.issubdtype(img.dtype, np.floating):
+        img = 255 * img
+
+    io.imsave(path, img.astype(np.uint8))

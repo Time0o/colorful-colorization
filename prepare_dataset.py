@@ -9,12 +9,14 @@ from shutil import move
 from subprocess import CalledProcessError, check_call
 
 from colorization.util.argparse import nice_help_formatter
+from colorization.util.image import imread, imsave, resize
 
 
 USAGE = \
 """usage: prepare_dataset.py [-h|--help]
                                  [--flatten]
                                  [--purge]
+                                 [--clean]
                                  [--file-ext EXT]
                                  [--val-split VAL_SPLIT]
                                  [--test-split TEST_SPLIT]
@@ -42,7 +44,15 @@ def _purge_toplevel(data_dir, file_ext):
             os.remove(os.path.join(root, f))
 
 
-def _split_dataset(data_dir, file_ext, shuffle, val_split, test_split):
+def _split_dataset(data_dir,
+                   file_ext,
+                   val_split,
+                   test_split,
+                   clean=True,
+                   shuffle=True,
+                   resize_height=None,
+                   resize_width=None):
+
     data_all = glob(os.path.join(data_dir, '*.' + file_ext))
 
     if shuffle:
@@ -60,16 +70,35 @@ def _split_dataset(data_dir, file_ext, shuffle, val_split, test_split):
                          (data_val, 'val'), \
                          (data_test, 'test'):
 
-        path = os.path.join(data_dir, subdir)
+        subdir_path = os.path.join(data_dir, subdir)
 
-        if not os.path.exists(path):
-            os.mkdir(path)
+        if not os.path.exists(subdir_path):
+            os.mkdir(subdir_path)
 
         for f in files:
-            move(f, path)
+            if not clean and resize_height is None and resize_width is None:
+                move(f, subdir_path)
+            else:
+                img = imread(f)
+
+                if clean:
+                    # remove non-RGB images
+                    if len(img.shape) != 3 or img.shape[2] not in [3, 4]:
+                        os.remove(f)
+
+                    # remove alpha channels
+                    if img.shape[2] == 4:
+                        img = img[:, :, :3]
+
+                img = resize(img, (resize_height, resize_width))
+                imsave(os.path.join(subdir_path, os.path.basename(f)), img)
 
 
-def _create_lmdbs(data_dir, convert_imageset):
+def _create_lmdbs(data_dir,
+                  convert_imageset,
+                  resize_height=None,
+                  resize_width=None):
+
     if args.convert_imageset is None:
         print("missing convert_imageset script location", file=sys.stderr)
         sys.exit(1)
@@ -92,13 +121,18 @@ def _create_lmdbs(data_dir, convert_imageset):
             ]))
 
         # call conversion script
-        lmdb_subdir = os.path.join(data_dir, 'lmdb', subdir)
+        lmdb_args = [args.convert_imageset]
+
+        if resize_height is not None:
+            lmdb_args += ['--resize-height', str(resize_height)]
+
+        if resize_width is not None:
+            lmdb_args += ['--resize-width', str(resize_width)]
 
         lmdb_args = [
-            args.convert_imageset,
             os.path.abspath(os.path.join(data_dir, subdir)),
             dummy_labels,
-            lmdb_subdir
+            os.path.join(data_dir, 'lmdb', subdir)
         ]
 
         try:
@@ -126,6 +160,11 @@ if __name__ == '__main__':
     parser.add_argument('--purge',
                         action='store_true',
                         help="remove non images before performing split")
+
+    parser.add_argument('--clean',
+                        action='store_true',
+                        help=str("convert images to RGB if possible and delete "
+                                 "them otherwise"))
 
     parser.add_argument('--file-ext',
                         metavar='EXT',
@@ -167,9 +206,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.resize_height is not None or args.resize_width is not None:
-        raise ValueError('TODO')
-
     # flatten and purge
     if args.flatten:
         _flatten_data_dir(args.data_dir, args.purge, args.file_ext)
@@ -179,9 +215,11 @@ if __name__ == '__main__':
     # split
     _split_dataset(args.data_dir,
                    args.file_ext,
-                   not args.no_shuffle,
                    args.val_split,
-                   args.test_split)
+                   args.test_split,
+                   shuffle=not args.no_shuffle,
+                   resize_height=args.resize_height,
+                   resize_width=args.resize_width)
 
     # create lmdbs
     if args.create_lmdb:
@@ -189,4 +227,7 @@ if __name__ == '__main__':
             print("missing convert_imageset script location", file=sys.stderr)
             sys.exit(1)
 
-        _create_lmdbs(args.data_dir, args.convert_imageset)
+        _create_lmdbs(args.data_dir,
+                      args.convert_imageset,
+                      resize_height=args.resize_height,
+                      resize_width=args.resize_width)
