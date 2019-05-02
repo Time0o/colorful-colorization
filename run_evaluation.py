@@ -5,12 +5,11 @@ import os
 from glob import glob
 
 import numpy as np
-from skimage import io
 
 import colorization.config as config
 from colorization.util.argparse import nice_help_formatter
 from colorization.util.image import \
-    lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
+    imread, imsave, lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
 
 
 USAGE = \
@@ -109,7 +108,7 @@ if __name__ == '__main__':
         model.load(checkpoint_path)
 
     # load input image
-    img_rgb = io.imread(args.input_image)
+    img_rgb = imread(args.input_image)
     img_rgb_resized = resize(img_rgb, (model.network.INPUT_SIZE,) * 2)
 
     h_orig, w_orig, _ = img_rgb.shape
@@ -126,4 +125,4 @@ if __name__ == '__main__':
     img_lab_pred = np.dstack(
         (img_lab[:, :, :1], resize(ab_pred, (h_orig, w_orig))))
 
-    io.imsave(args.output_image, lab_to_rgb(img_lab_pred))
+    imsave(args.output_image, lab_to_rgb(img_lab_pred))
