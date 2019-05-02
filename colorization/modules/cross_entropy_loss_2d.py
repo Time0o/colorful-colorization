@@ -8,6 +8,10 @@ class CrossEntropyLoss2d(nn.Module):
         super().__init__()
 
     def forward(self, outputs, labels):
-        n, _, h, w = outputs.shape
+        softmax = log_softmax(outputs, dim=1)
 
-        return -torch.sum(log_softmax(outputs, dim=1) * labels) / (n * h * w)
+        norm = labels.clone()
+
+        norm[norm != 0] = torch.log(norm[norm != 0])
+
+        return -torch.sum((softmax - norm) * labels) / outputs.shape[0]
