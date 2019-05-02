@@ -89,8 +89,8 @@
         }
     },
     "training_args": {
-        "iterations": 450000,
+        "iterations": 5000,
         "checkpoint_dir": ["path", "../models/default"],
-        "epochs_till_checkpoint": 10000
+        "epochs_till_checkpoint": 1
     }
 }
