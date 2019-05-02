@@ -8,6 +8,10 @@ wget https://github.com/richzhang/colorization/raw/master/resources/pts_in_hull.
 wget https://github.com/richzhang/colorization/raw/master/resources/prior_probs.npy \
     -O ./resources/q-prior.npy
 
+# init model
+wget eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/train/init_v2.caffemodel \
+    -O ./resources/init_v2.caffemodel
+
 # release models
 wget https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt \
     -O ./resources/colorization_deploy_v2.prototxt
