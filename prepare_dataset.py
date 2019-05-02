@@ -93,6 +93,8 @@ def _split_dataset(data_dir,
                 img = resize(img, (resize_height, resize_width))
                 imsave(os.path.join(subdir_path, os.path.basename(f)), img)
 
+                os.remove(f)
+
 
 def _create_lmdbs(data_dir,
                   convert_imageset,
