@@ -12,6 +12,16 @@ from colorization.util.argparse import nice_help_formatter
 from colorization.util.image import imread, imsave, resize
 
 
+TRAIN_SUBDIR = 'train'
+VAL_SUBDIR = 'val'
+TEST_SUBDIR = 'test'
+
+ALL_SUBDIRS = [
+    TRAIN_SUBDIR,
+    VAL_SUBDIR,
+    TEST_SUBDIR
+]
+
 USAGE = \
 """usage: prepare_dataset.py [-h|--help]
                                  [--flatten]
@@ -24,6 +34,25 @@ USAGE = \
                                  [--create-lmdb]
                                  [--convert-imageset SCRIPT]
                                  DATA_DIR"""
+
+
+def _is_processed(data_dir):
+    exists = {d: False for d in ALL_SUBDIRS}
+
+    for subdir in ALL_SUBDIRS:
+        if os.path.exists(os.path.join(data_dir, subdir)):
+            exists[subdir] = True
+
+    if all(exists.values()):
+        err = "directory seems to be processed, skipping split"
+        print(err, file=sys.stderr)
+        return True
+    elif any(exists.values()):
+        err = "directory is partially processed, manual cleanup required"
+        print(err, file=sys.stderr)
+        sys.exit(1)
+    else:
+        return True
 
 
 def _flatten_data_dir(data_dir, purge, file_ext):
@@ -66,9 +95,9 @@ def _split_dataset(data_dir,
     data_val = data_all[num_train:(num_train + num_val)]
     data_test = data_all[(num_train + num_val):]
 
-    for files, subdir in (data_train, 'train'), \
-                         (data_val, 'val'), \
-                         (data_test, 'test'):
+    for files, subdir in (data_train, TRAIN_SUBDIR), \
+                         (data_val, VAL_SUBDIR), \
+                         (data_test, TEST_SUBDIR):
 
         subdir_path = os.path.join(data_dir, subdir)
 
@@ -112,9 +141,9 @@ def _create_lmdbs(data_dir,
         os.mkdir(path)
 
     # create one lmdb per subdirectory
-    for subdir in 'train', 'val', 'test':
+    for subdir in ALL_SUBDIRS:
         # create dummy label text file
-        dummy_labels = subdir + '.txt'
+        dummy_labels = os.path.join(data_dir, subdir + '.txt')
 
         with open(dummy_labels, 'w') as f:
             f.write('\n'.join([
@@ -126,12 +155,12 @@ def _create_lmdbs(data_dir,
         lmdb_args = [args.convert_imageset]
 
         if resize_height is not None:
-            lmdb_args += ['--resize-height', str(resize_height)]
+            lmdb_args += ['--resize_height', str(resize_height)]
 
         if resize_width is not None:
-            lmdb_args += ['--resize-width', str(resize_width)]
+            lmdb_args += ['--resize_width', str(resize_width)]
 
-        lmdb_args = [
+        lmdb_args += [
             os.path.abspath(os.path.join(data_dir, subdir)),
             dummy_labels,
             os.path.join(data_dir, 'lmdb', subdir)
@@ -208,20 +237,22 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # flatten and purge
-    if args.flatten:
-        _flatten_data_dir(args.data_dir, args.purge, args.file_ext)
-    elif args.purge:
-        _purge_toplevel(args.data_dir, args.file_ext)
+    # avoid processing data directories twice
+    if not _is_processed(args.data_dir):
+        # flatten and purge
+        if args.flatten:
+            _flatten_data_dir(args.data_dir, args.purge, args.file_ext)
+        elif args.purge:
+            _purge_toplevel(args.data_dir, args.file_ext)
 
-    # split
-    _split_dataset(args.data_dir,
-                   args.file_ext,
-                   args.val_split,
-                   args.test_split,
-                   shuffle=not args.no_shuffle,
-                   resize_height=args.resize_height,
-                   resize_width=args.resize_width)
+        # split
+        _split_dataset(args.data_dir,
+                       args.file_ext,
+                       args.val_split,
+                       args.test_split,
+                       shuffle=not args.no_shuffle,
+                       resize_height=args.resize_height,
+                       resize_width=args.resize_width)
 
     # create lmdbs
     if args.create_lmdb:
