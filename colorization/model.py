@@ -77,9 +77,10 @@ class Model:
             loss (torch.nn.Module, optional):
                 Training loss function, if this is set to `None`, the model is
                 not trainable.
-            optimizer (torch.optim.Optimizer, optional):
-                Training optimizer, if this is set to `None`, the model is not
-                trainable.
+            optimizer (functools.partial, optional):
+                Partially applied training optimizer, parameter argument is
+                supplied by this constructor, if this is set to `None`, the
+                model is not trainable.
             log_config (dict, optional):
                 Python `logging` configuration dictionary, if this is set to
                 `None`, logging will be disabled.
@@ -93,7 +94,7 @@ class Model:
 
         self.network = network
         self.loss = loss
-        self.optimizer = optimizer
+        self.optimizer = optimizer(network.parameters())
 
         self._log_enabled = \
             _mp_spawn and log_config is not None and logger is not None

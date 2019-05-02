@@ -3,7 +3,8 @@ import logging
 import logging.config
 import os
 import sys
-from collections import Mapping, Sequence
+from collections import Mapping
+from functools import partial
 from importlib import import_module
 from typing import Dict, Generator, Tuple, Union
 
@@ -35,12 +36,15 @@ def _get_nested_dictionary(d: dict, path: list) -> dict:
     # recursively index `d` until all keys are exhausted or a non-dictionary is
     # encountered (in which case the last encountered dictionary is returned).
 
+    if not path:
+        return d
+
     d = d
     for next_dict in path:
         if isinstance(d[next_dict], Mapping):
             d = d[next_dict]
         else:
-            break
+            return None
 
     return d
 
@@ -65,7 +69,7 @@ def _is_path(path: object) -> bool:
     # represented by lists of length two whose first element is the string
     # `'path'` and whose second element is an absolute or relative file path.
 
-    return isinstance(path, Sequence) and path[0] == 'path'
+    return isinstance(path, list) and path[0] == 'path'
 
 
 def _resolve_path(path: Tuple[str, str], root: str) -> str:
@@ -87,7 +91,7 @@ def _resolve_paths(config: dict, root: str) -> None:
 
     for val_path, val in _recurse_dictionary(config):
         if _is_path(val):
-            parent_dict = _get_nested_dictionary(config, val_path)
+            parent_dict = _get_nested_dictionary(config, val_path[:-1])
             parent_dict[val_path[-1]] = _resolve_path(val, root)
 
 
@@ -127,9 +131,7 @@ def _get_class(name: str) -> object:
     return getattr(import_module(module), classname)
 
 
-def _construct_class(config: Dict[str, Union[str, dict]],
-                     *extra_args,
-                     **extra_kwargs) -> object:
+def _construct_class(config: Dict[str, Union[str, dict]]) -> object:
     # Construct an object based on a configuration dictionary which contains
     # the objects type (in string representation) under the key `'type'` and
     # constructor keyword parameters under the key `'params'`.
@@ -137,7 +139,36 @@ def _construct_class(config: Dict[str, Union[str, dict]],
     constructor = _get_class(config['type'])
     params = config.get('params', {})
 
-    return constructor(*extra_args, **extra_kwargs, **params)
+    try:
+        return constructor(**params)
+    except:
+        # if construction fails, just assume necessary parameters will be
+        # supplied later
+        return partial(constructor, **params)
+
+
+def _instantiate_classes(config):
+    if not isinstance(config, Mapping):
+        return config
+
+    # instantiate all classes in configuration dictionary 'bottom up'
+    paths = list(_recurse_dictionary(config))
+    paths.sort(key=lambda p: -len(p[0]))
+
+    for keys, val in paths:
+        d = _get_nested_dictionary(config, keys[:-1])
+
+        # recurse if list encountered (assume config does not contain tuples)
+        if isinstance(val, list):
+            d[keys[-1]] = [_instantiate_classes(e) for e in val]
+        if keys[-1] == 'type':
+            if len(keys) == 1:
+                return _construct_class(d)
+            else:
+                parent = _get_nested_dictionary(config, keys[:-2])
+                parent[keys[-2]] = _construct_class(d)
+
+    return config
 
 
 # public functions
@@ -154,36 +185,5 @@ def get_config(path: str, default_path=None) -> Dict[str, dict]:
     return config
 
 
-def dataloader_from_config(config):
-    # create dataset
-    dataset = _construct_class(config['dataset_args'])
-
-    # create dataloader
-    dataloader = _construct_class(config['dataloader_args'], dataset)
-
-    return dataloader
-
-
-def model_from_config(config, trainable=True):
-    # create network
-    net = ColorizationNetwork(**config.get('network_args', {}))
-
-    if trainable:
-        # create loss function
-        loss = CrossEntropyLoss2d()
-
-        # create optimizer
-        optimizer = _construct_class(config['optimizer_args'], net.parameters())
-    else:
-        loss = None
-        optimizer = None
-
-    # get log config
-    log_config = config.get('log_args', None)
-
-    # construct model
-    return Model(network=net,
-                 loss=loss,
-                 optimizer=optimizer,
-                 log_config=log_config,
-                 **config.get('model_args', {}))
+def parse_config(config: dict) -> dict:
+    return _instantiate_classes(config)

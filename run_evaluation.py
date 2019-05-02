@@ -70,9 +70,9 @@ if __name__ == '__main__':
 
     # load configuration file(s)
     cfg = config.get_config(args.config)
+    cfg = config.parse_config(cfg)
 
-    # create model
-    model = config.model_from_config(cfg)
+    model = cfg['model']
 
     # load pretrained weights
     if (args.pretrain_proto is None) != (args.pretrain_model is None):
