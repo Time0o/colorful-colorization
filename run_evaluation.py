@@ -5,12 +5,11 @@ import os
 from glob import glob
 
 import numpy as np
-from skimage import io
 
 import colorization.config as config
 from colorization.util.argparse import nice_help_formatter
 from colorization.util.image import \
-    lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
+    imread, imsave, lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
 
 
 USAGE = \
@@ -18,6 +17,7 @@ USAGE = \
                          --config CONFIG
                          --input-image IMAGE
                          --output-image IMAG
+                         [--input-size SIZE]
                          [--pretrain-proto PROTOTXT]
                          [--pretrain-model CAFFEMODEL]
                          [--checkpoint CHECKPOINT]
@@ -47,6 +47,13 @@ if __name__ == '__main__':
                         help=str("location to which predicted color image is "
                                  "to be written"))
 
+    parser.add_argument('--input-size',
+                        metavar='SIZE',
+                        default=224,
+                        help=str("size (both height and width) to which image "
+                                 "is rescaled before putting to it through the "
+                                 "network (default is %(default)d)"))
+
     parser.add_argument('--pretrain-proto',
                         metavar='PROTOTXT',
                         help="Caffe prototxt file")
@@ -71,9 +78,9 @@ if __name__ == '__main__':
 
     # load configuration file(s)
     cfg = config.get_config(args.config)
+    cfg = config.parse_config(cfg)
 
-    # create model
-    model = config.model_from_config(cfg)
+    model = cfg['model']
 
     # load pretrained weights
     if (args.pretrain_proto is None) != (args.pretrain_model is None):
@@ -109,8 +116,8 @@ if __name__ == '__main__':
         model.load(checkpoint_path)
 
     # load input image
-    img_rgb = io.imread(args.input_image)
-    img_rgb_resized = resize(img_rgb, (model.network.INPUT_SIZE,) * 2)
+    img_rgb = imread(args.input_image)
+    img_rgb_resized = resize(img_rgb, (args.input_size,) * 2)
 
     h_orig, w_orig, _ = img_rgb.shape
 
@@ -126,4 +133,4 @@ if __name__ == '__main__':
     img_lab_pred = np.dstack(
         (img_lab[:, :, :1], resize(ab_pred, (h_orig, w_orig))))
 
-    io.imsave(args.output_image, lab_to_rgb(img_lab_pred))
+    imsave(args.output_image, lab_to_rgb(img_lab_pred))

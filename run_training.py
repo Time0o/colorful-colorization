@@ -51,12 +51,10 @@ if __name__ == '__main__':
 
     # load configuration file(s)
     cfg = config.get_config(args.config, args.default_config)
+    cfg = config.parse_config(cfg)
 
-    # prepare dataset
-    dataloader = config.dataloader_from_config(cfg)
-
-    # create model
-    model = config.model_from_config(cfg)
+    dataloader = cfg['dataloader']
+    model = cfg['model']
 
     # initialize model
     if (args.init_proto is None) != (args.init_model is None):
