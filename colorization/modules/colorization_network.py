@@ -23,8 +23,6 @@ _CAFFE_LAYER_NAME_MAPPING = {
 
 
 class ColorizationNetwork(nn.Module):
-    INPUT_SIZE = 224
-
     DEFAULT_KERNEL_SIZE = 3
 
     def __init__(self, annealed_mean_T=0, class_rebal_lambda=None):
@@ -129,8 +127,6 @@ class ColorizationNetwork(nn.Module):
         })
 
     def forward(self, img):
-        assert img.shape[2:] == (self.INPUT_SIZE,) * 2
-
         if self.training:
             l, ab = img[:, :1, :, :], img[:, 1:, :, :]
         else:

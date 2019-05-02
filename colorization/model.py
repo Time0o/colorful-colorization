@@ -147,8 +147,6 @@ class Model:
         if not dataloader.pin_memory:
             warn("'pin_memory' not set, this will slow down training")
 
-        dataloader.dataset.image_size = (self.network.INPUT_SIZE,) * 2
-
         # switch to training mode (essential for batch normalization)
         self.network.train()
 

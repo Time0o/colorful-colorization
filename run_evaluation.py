@@ -17,6 +17,7 @@ USAGE = \
                          --config CONFIG
                          --input-image IMAGE
                          --output-image IMAG
+                         [--input-size SIZE]
                          [--pretrain-proto PROTOTXT]
                          [--pretrain-model CAFFEMODEL]
                          [--checkpoint CHECKPOINT]
@@ -45,6 +46,13 @@ if __name__ == '__main__':
                         metavar='IMAGE',
                         help=str("location to which predicted color image is "
                                  "to be written"))
+
+    parser.add_argument('--input-size',
+                        metavar='SIZE',
+                        default=224,
+                        help=str("size (both height and width) to which image "
+                                 "is rescaled before putting to it through the "
+                                 "network (default is %(default)d)"))
 
     parser.add_argument('--pretrain-proto',
                         metavar='PROTOTXT',
@@ -109,7 +117,7 @@ if __name__ == '__main__':
 
     # load input image
     img_rgb = imread(args.input_image)
-    img_rgb_resized = resize(img_rgb, (model.network.INPUT_SIZE,) * 2)
+    img_rgb_resized = resize(img_rgb, (args.input_size,) * 2)
 
     h_orig, w_orig, _ = img_rgb.shape
 
