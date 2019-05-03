@@ -52,7 +52,7 @@ def _is_processed(data_dir):
         print(err, file=sys.stderr)
         sys.exit(1)
     else:
-        return True
+        return False
 
 
 def _flatten_data_dir(data_dir, purge, file_ext):
@@ -105,7 +105,7 @@ def _split_dataset(data_dir,
             os.mkdir(subdir_path)
 
         for f in files:
-            if not clean and resize_height is None and resize_width is None:
+            if not clean and resize_height is None:
                 move(f, subdir_path)
             else:
                 img = imread(f)
@@ -119,7 +119,9 @@ def _split_dataset(data_dir,
                     if img.shape[2] == 4:
                         img = img[:, :, :3]
 
-                img = resize(img, (resize_height, resize_width))
+                if resize_height is not None:
+                    img = resize(img, (resize_height, resize_width))
+
                 imsave(os.path.join(subdir_path, os.path.basename(f)), img)
 
                 os.remove(f)
@@ -156,8 +158,6 @@ def _create_lmdbs(data_dir,
 
         if resize_height is not None:
             lmdb_args += ['--resize_height', str(resize_height)]
-
-        if resize_width is not None:
             lmdb_args += ['--resize_width', str(resize_width)]
 
         lmdb_args += [
@@ -236,6 +236,12 @@ if __name__ == '__main__':
                                  "--create-lmdb is set"))
 
     args = parser.parse_args()
+
+    # validate argumenst
+    if (args.resize_height is None) != (args.resize_width is None):
+        err = "--resize-height and --resize-width must be specified together"
+        print(err, file=sys.stderr)
+        sys.exit(1)
 
     # avoid processing data directories twice
     if not _is_processed(args.data_dir):
