@@ -3,10 +3,12 @@ import logging.config
 import os
 import re
 from glob import glob
+from math import exp, log
 from warnings import warn
 
 import torch
 from torch.multiprocessing import Process, SimpleQueue, set_start_method
+from torch.optim.lr_scheduler import LambdaLR, CyclicLR
 
 try:
     set_start_method('spawn', force=True)
@@ -16,15 +18,23 @@ except RuntimeError:
     _mp_spawn = False
 
 
-class _LossLogData:
-    def __init__(self, i, i_max, loss):
+class _IterationLogData:
+    def __init__(self, i, i_max, lr=None, loss=None):
         self.i = i
         self.i_max = i_max
+        self.lr = lr
         self.loss = loss
 
     def __repr__(self):
-        fmt = "iteration {:,}/{:,}: loss was {:1.3e}"
-        return fmt.format(self.i, self.i_max, self.loss)
+        msg = "iteration {:,}/{:,}".format(self.i, self.i_max)
+
+        if self.lr is not None:
+            msg += ", lr was {:1.3e}".format(self.lr)
+
+        if self.loss is not None:
+            msg += ", loss was {:1.3e}".format(self.loss)
+
+        return msg
 
 
 def _log_progress(log_config, logger, queue):
@@ -58,6 +68,7 @@ class ColorizationModel:
                  network,
                  loss=None,
                  optimizer=None,
+                 lr_scheduler=None,
                  log_config=None,
                  logger=None):
         """
@@ -94,7 +105,8 @@ class ColorizationModel:
 
         self.network = network
         self.loss = loss
-        self.optimizer = optimizer(network.parameters())
+        self._optimizer = optimizer
+        self._lr_scheduler = lr_scheduler
 
         self._log_enabled = \
             _mp_spawn and log_config is not None and logger is not None
@@ -102,6 +114,108 @@ class ColorizationModel:
         if self._log_enabled:
             self._log_config = log_config
             self._logger = logger
+
+    def lr_find(self,
+                dataloader,
+                lr_min=1e-7,
+                lr_max=0.1,
+                lr_exp=False,
+                iterations=100,
+                smoothing_factor=0.05):
+        """Utility function for finding good cyclical learning rate limits.
+
+        This function increases the learning rate over a certain number of
+        iterations and records the (smoothed) resulting losses.
+
+        Args:
+            dataloader (torch.utils.data.DataLoder):
+                Data loader, should return Lab images of arbitrary shape and
+                datatype float32. For efficient training, the data loader
+                should be constructed with `pin_memory` set to `True`.
+            lr_min (float):
+                Initial learning rate.
+            lr_max (float):
+                Final learning rate.
+            lr_exp (bool):
+                If `True`, increase learning rate exponentially instead of
+                linearly.
+            iterations (int):
+                Number of iterations (batches) to run the training for.
+            smoothing_factor:
+                Loss smoothing factor, should be between 0 and 1, lower
+                values result in smoother loss curves.
+
+        """
+
+        # start training
+        self._before_training()
+
+        # construct optimizer
+        self._create_optimizer(create_scheduler=False)
+
+        self._set_lr(lr_min)
+
+        # construct scheduler
+        if lr_exp:
+            def lr_lambda(i):
+                if i == 0:
+                    return 1
+
+                return exp((log(lr_max) - log(lr_min)) * (i / (iterations - 1)))
+        else:
+            def lr_lambda(i):
+                if i == 0:
+                    return 1
+
+                return (lr_max / lr_min) * (i / (iterations - 1))
+
+        lr_scheduler = LambdaLR(self.optimizer, lr_lambda)
+
+        # create loss curve
+        learning_rates = []
+        losses = []
+
+        i = 1
+        done = False
+        while not done:
+            for img in dataloader:
+                # move image to device
+                img = self._to_device(img, dataloader)
+
+                # update parameters
+                loss = self._update_parameters(img)
+
+                # store loss
+                if i > 1:
+                    loss = smoothing_factor * loss + \
+                           (1 - smoothing_factor) * losses[-1]
+
+                losses.append(loss)
+
+                # display progress
+                lr = self._get_lr()
+
+                if self._log_enabled:
+                    log_data = _IterationLogData(i, iterations, lr=lr)
+
+                    self._log_queue.put(log_data)
+
+                # update learning rate
+                learning_rates.append(lr)
+
+                lr_scheduler.step()
+
+                # increment iteration counter
+                i += 1
+
+                if i > iterations:
+                    done = True
+                    break
+
+        # end training
+        self._after_training()
+
+        return learning_rates, losses
 
     def train(self,
               dataloader,
@@ -143,22 +257,11 @@ class ColorizationModel:
             self._validate_checkpoint_dir(
                 checkpoint_dir, resuming=(checkpoint_init is not None))
 
-        # check whether dataloader has pin_memory set and set image size
-        if not dataloader.pin_memory:
-            warn("'pin_memory' not set, this will slow down training")
+        # start training
+        self._before_training()
 
-        # switch to training mode (essential for batch normalization)
-        self.network.train()
-
-        # create logging thread
-        if self._log_enabled:
-            self._log_queue = SimpleQueue()
-
-            self._log = Process(
-                target=_log_progress,
-                args=(self._log_config, self._logger, self._log_queue))
-
-            self._log.start()
+        # construct optimizer and scheduler
+        self._create_optimizer()
 
         # optimization loop
         if checkpoint_init is None:
@@ -171,23 +274,23 @@ class ColorizationModel:
         done = False
         while not done:
             for img in dataloader:
-                # move data to device
-                if dataloader.pin_memory:
-                    img = img.cuda(non_blocking=True)
+                # move image to device
+                img = self._to_device(img, dataloader)
 
-                # perform parameter update
-                self.optimizer.zero_grad()
+                # update parameters
+                loss = self._update_parameters(img)
 
-                q_pred, q_actual = self.network(img)
-                loss = self.loss(q_pred, q_actual)
-                loss.backward()
-
-                self.optimizer.step()
+                # update learning rate
+                self.lr_scheduler.step()
 
                 # display progress
+                lr = self._get_lr()
+
                 if self._log_enabled:
-                    self._log_queue.put(
-                        _LossLogData(i, iterations, loss.item()))
+                    log_data = _IterationLogData(
+                        i, iterations, loss=loss.item(), lr=lr)
+
+                    self._log_queue.put(log_data)
 
                 # increment iteration counter
                 i += 1
@@ -208,10 +311,8 @@ class ColorizationModel:
         if checkpoint_dir is not None:
             self._checkpoint_training(checkpoint_dir, 'final')
 
-        # stop logging thread
-        if self._log_enabled:
-            self._log_queue.put('done')
-            self._log.join()
+        # end training
+        self._after_training()
 
     def predict(self, img):
         """Perform single batch prediction using the current network.
@@ -295,6 +396,68 @@ class ColorizationModel:
                 break
 
         return checkpoint_path
+
+    def _create_optimizer(self, create_scheduler=True):
+        self.optimizer = self._optimizer(self.network.parameters())
+
+        if self._lr_scheduler is None:
+            class DummyScheduler:
+                def step(self):
+                    pass
+
+            self.lr_scheduler = DummyScheduler()
+        else:
+            # circumvent PyTorch CyclicLR bug
+            for pg in self.optimizer.param_groups:
+                if 'momentum' not in pg:
+                    pg['momentum'] = None
+
+            self.lr_scheduler = self._lr_scheduler(self.optimizer)
+
+    def _get_lr(self):
+        return self.optimizer.param_groups[0]['lr']
+
+    def _set_lr(self, lr):
+        self.optimizer.param_groups[0]['lr'] = lr
+
+    def _before_training(self):
+        # switch to training mode (essential for batch normalization)
+        self.network.train()
+
+        # create logging thread
+        if self._log_enabled:
+            self._log_queue = SimpleQueue()
+
+            self._log = Process(
+                target=_log_progress,
+                args=(self._log_config, self._logger, self._log_queue))
+
+            self._log.start()
+
+    def _after_training(self):
+        # stop logging thread
+        if self._log_enabled:
+            self._log_queue.put('done')
+            self._log.join()
+
+    def _to_device(self, img, dataloader):
+        # move data to device
+        if dataloader.pin_memory:
+            return img.cuda(non_blocking=True)
+        else:
+            warn("'pin_memory' not set, this will slow down training")
+            return img.cuda()
+
+    def _update_parameters(self, img):
+        self.optimizer.zero_grad()
+
+        q_pred, q_actual = self.network(img)
+        loss = self.loss(q_pred, q_actual)
+        loss.backward()
+
+        self.optimizer.step()
+
+        return loss
 
     def _checkpoint_training(self, checkpoint_dir, checkpoint_epoch):
         state = {

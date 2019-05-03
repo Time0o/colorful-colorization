@@ -52,6 +52,15 @@
                     "weight_decay": 1e-3
                 }
             },
+            "lr_scheduler": {
+                "type": "torch.optim.lr_scheduler.CyclicLR",
+                "params": {
+                    "base_lr": 2e-4,
+                    "max_lr": 0.01,
+                    "step_size_up": 800,
+                    "cycle_momentum": false
+                }
+            },
             "log_config": {
                 "version": 1,
                 "disable_existing_loggers": false,
