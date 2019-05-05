@@ -34,6 +34,7 @@ USAGE = \
                                  [--no-shuffle]
                                  [--create-lmdb]
                                  [--convert-imageset SCRIPT]
+                                 [--verbose]
                                  DATA_DIR"""
 
 
@@ -82,7 +83,8 @@ def _split_dataset(data_dir,
                    shuffle=True,
                    reduce_size=None,
                    resize_height=None,
-                   resize_width=None):
+                   resize_width=None,
+                   verbose=False):
 
     data_all = glob(os.path.join(data_dir, '*.' + file_ext))
 
@@ -112,7 +114,12 @@ def _split_dataset(data_dir,
         if not os.path.exists(subdir_path):
             os.mkdir(subdir_path)
 
-        for f in files:
+        for i, f in enumerate(files):
+            if verbose:
+                fmt = "\r{}: processing image {}/{}"
+                end = '\n' if i == len(files) - 1 else ''
+                print(fmt.format(subdir, i + 1, len(files)), end=end)
+
             if not clean and resize_height is None:
                 move(f, subdir_path)
             else:
@@ -249,6 +256,10 @@ if __name__ == '__main__':
                         help=str("create_imageset script location (required if "
                                  "--create-lmdb is set"))
 
+    parser.add_argument('--verbose',
+                        action='store_true',
+                        help="display progress")
+
     args = parser.parse_args()
 
     # validate argumenst
@@ -273,7 +284,8 @@ if __name__ == '__main__':
                        shuffle=not args.no_shuffle,
                        reduce_size=args.reduce,
                        resize_height=args.resize_height,
-                       resize_width=args.resize_width)
+                       resize_width=args.resize_width,
+                       verbose=args.verbose)
 
     # create lmdbs
     if args.create_lmdb:
