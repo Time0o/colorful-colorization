@@ -81,7 +81,7 @@ class ImageSet:
         if self._lazy:
             return Image.load(self._images[i])
         else:
-            self._images[i]
+            return self._images[i]
 
 
 def rgb_to_lab(img):
