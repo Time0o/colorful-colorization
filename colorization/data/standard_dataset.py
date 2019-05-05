@@ -83,7 +83,7 @@ class StandardDataset(Dataset):
 
             dataset_path = os.path.join(self.root, dataset)
 
-            for image_path in self._listdir(dataset_path):
+            for image_path in os.listdir(dataset_path):
                 self._indices[dataset].append(image_path)
 
     def _clean(self, clean):
@@ -117,19 +117,3 @@ class StandardDataset(Dataset):
         img_lab = rgb_to_lab(img_rgb)
 
         return np.moveaxis(img_lab.astype(self.DTYPE), -1, 0)
-
-    @staticmethod
-    def _listdir(path):
-        files = glob(os.path.join(path, '*'))
-
-        def parse_num(f):
-            base = f.rsplit('.', 1)[0]
-
-            i = re.search(r'\d+$', base).start()
-            base, num = base[:i], base[i:]
-
-            return base, int(num)
-
-        files.sort(key=parse_num)
-
-        return files
