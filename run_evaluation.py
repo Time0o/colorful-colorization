@@ -30,9 +30,9 @@ def _err(msg):
     raise ValueError(msg)
 
 
-def _predict_image(input_image, input_size, output_image):
+def _predict_image(input_image, output_image):
     img = Image.load(input_image)
-    img_pred = img.predict(model, input_size)
+    img_pred = img.predict(model)
     img_pred.save(output_image)
 
 
@@ -64,13 +64,6 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir',
                         metavar='IMAGE_DIR',
                         help="path to directory in which to write output images")
-
-    parser.add_argument('--input-size',
-                        metavar='SIZE',
-                        default=224,
-                        help=str("size (both height and width) to which image "
-                                 "is rescaled before putting to it through the "
-                                 "network (default is %(default)d)"))
 
     parser.add_argument('--pretrain-proto',
                         metavar='PROTOTXT',
@@ -142,7 +135,7 @@ if __name__ == '__main__':
 
     # predicted image(s)
     if args.input_image is not None:
-        _predict_image(args.input_image, args.input_size, args.output_image)
+        _predict_image(args.input_image, args.output_image)
     elif args.input_dir is not None:
         if not os.path.exists(args.output_dir):
             os.mkdir(args.output_dir)
@@ -154,4 +147,4 @@ if __name__ == '__main__':
             in_image = os.path.join(args.input_dir, image)
             out_image = os.path.join(args.output_dir, image)
 
-            _predict_image(in_image, args.input_size, out_image)
+            _predict_image(in_image, out_image)

@@ -39,7 +39,7 @@ class Image:
 
         ax.axis('off')
 
-    def predict(self, model, input_size):
+    def predict(self, model, input_size=224):
         img_rgb_resized = resize(self._img_rgb, (input_size,) * 2)
         img_lab_resized = rgb_to_lab(img_rgb_resized)
 
