@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import warnings
 
 import numpy as np
 
@@ -49,7 +50,10 @@ def _predict_image(input_image, input_size, output_image):
     img_lab_pred = np.dstack(
         (img_lab[:, :, :1], resize(ab_pred, (h_orig, w_orig))))
 
-    imsave(output_image, lab_to_rgb(img_lab_pred))
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+
+        imsave(output_image, lab_to_rgb(img_lab_pred))
 
 
 if __name__ == '__main__':
