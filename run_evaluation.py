@@ -156,9 +156,9 @@ if __name__ == '__main__':
         if args.checkpoint is not None:
             checkpoint_path = args.checkpoint
         elif args.checkpoint_dir is not None:
-            checkpoint_path, _ = model.find_latest_checkpoint(args.checkpoint_dir)
+            checkpoint_path = model.find_latest_checkpoint(args.checkpoint_dir)
 
-        model.load(checkpoint_path)
+        model.restore(checkpoint_path)
 
     # predicted image(s)
     if args.input_image is not None:
