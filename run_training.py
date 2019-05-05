@@ -11,7 +11,6 @@ from colorization.util.argparse import nice_help_formatter
 USAGE = \
 """run_training.py [-h|--help]
                        --config CONFIG
-                       [--default-config CONFIG]
                        [--init-proto PROTOTXT]
                        [--init-model CAFFEMODEL]
                        [--random-seed SEED]"""
@@ -25,10 +24,6 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         required=True,
                         help="training configuration JSON file")
-
-    parser.add_argument('--default-config',
-                        metavar='CONFIG',
-                        help="training default configuration JSON file")
 
     parser.add_argument('--init-proto',
                         metavar='PROTOTXT',
@@ -50,7 +45,7 @@ if __name__ == '__main__':
         torch.manual_seed(args.random_seed)
 
     # load configuration file(s)
-    cfg = config.get_config(args.config, args.default_config)
+    cfg = config.get_config(args.config)
     cfg = config.parse_config(cfg)
 
     dataloader = cfg['dataloader']
