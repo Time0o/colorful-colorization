@@ -61,7 +61,14 @@ def _flatten_data_dir(data_dir, purge, file_ext):
     for root, subdirs, files in os.walk(data_dir):
         for f in files:
             if f.endswith('.' + file_ext):
-                move(os.path.join(root, f), data_dir)
+                target = os.path.join(data_dir, f)
+
+                if os.path.exists(target):
+                    path, ext = target.rsplit('.', 1)
+                    target = path + '_.' + ext
+
+                move(os.path.join(root, f), target)
+
             elif purge:
                 os.remove(os.path.join(root, f))
 
