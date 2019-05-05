@@ -83,7 +83,7 @@ class StandardDataset(Dataset):
 
             dataset_path = os.path.join(self.root, dataset)
 
-            for image_path in os.listdir(dataset_path):
+            for image_path in glob(os.path.join(dataset_path, '*')):
                 self._indices[dataset].append(image_path)
 
     def _clean(self, clean):
