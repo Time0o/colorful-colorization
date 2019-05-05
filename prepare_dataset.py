@@ -27,6 +27,7 @@ USAGE = \
                                  [--flatten]
                                  [--purge]
                                  [--clean]
+                                 [--reduce N]
                                  [--file-ext EXT]
                                  [--val-split VAL_SPLIT]
                                  [--test-split TEST_SPLIT]
@@ -79,6 +80,7 @@ def _split_dataset(data_dir,
                    test_split,
                    clean=True,
                    shuffle=True,
+                   reduce_size=None,
                    resize_height=None,
                    resize_width=None):
 
@@ -86,6 +88,12 @@ def _split_dataset(data_dir,
 
     if shuffle:
         random.shuffle(data_all)
+
+    if reduce_size is not None:
+        for f in data_all[reduce_size:]:
+            os.remove(f)
+
+        data_all = data_all[:reduce_size]
 
     num_val = int(val_split * len(data_all))
     num_test = int(test_split * len(data_all))
@@ -197,6 +205,12 @@ if __name__ == '__main__':
                         help=str("convert images to RGB if possible and delete "
                                  "them otherwise"))
 
+    parser.add_argument('--reduce',
+                        metavar='N',
+                        type=int,
+                        help=str("reduce number of total images before "
+                                 "performing split"))
+
     parser.add_argument('--file-ext',
                         metavar='EXT',
                         default='jpg',
@@ -257,6 +271,7 @@ if __name__ == '__main__':
                        args.val_split,
                        args.test_split,
                        shuffle=not args.no_shuffle,
+                       reduce_size=args.reduce,
                        resize_height=args.resize_height,
                        resize_width=args.resize_width)
 
