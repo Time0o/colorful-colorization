@@ -1,8 +1,13 @@
 import re
+from itertools import chain
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
+from matplotlib.transforms import blended_transform_factory
+
+from .util.image import rgb_to_lab
 
 
 _FIGURE_WIDTH = 12
@@ -23,6 +28,9 @@ def _subplots(r, c, figsize=None):
     for r_ in range(r):
         for c_ in range(c):
             axes[r_, c_] = plt.subplot(gs[r_ * c + c_])
+
+    for ax in axes.flatten():
+        ax.axis('off')
 
     return fig, axes
 
@@ -90,8 +98,6 @@ def annealed_mean_demo(model, image_set, ts=None, verbose=False):
 
             axes[r, c].imshow(image_pred.get())
 
-            axes[r, c].axis('off')
-
     model.network.decode_q.T = t_orig
 
     for i, (t, ax) in enumerate(zip(ts, axes[0, :])):
@@ -107,3 +113,49 @@ def annealed_mean_demo(model, image_set, ts=None, verbose=False):
             title_fmt = "{}\n$T={}$"
 
         ax.set_title(title_fmt.format(suptitle, t))
+
+
+def good_vs_bad_demo(model_norebal,
+                     model_rebal,
+                     image_set_good,
+                     image_set_bad,
+                     verbose=False):
+
+    assert len(image_set_good) % 2 == 1
+    assert len(image_set_bad) % 2 == 1
+
+    fig, axes = _subplots(len(image_set_good) + len(image_set_bad), 4)
+
+    for r, image in enumerate(chain(image_set_good, image_set_bad)):
+        if verbose:
+            print("running prediction for image {}".format(r + 1))
+
+        # input
+        axes[r, 0].imshow(image.get('lab')[:, :, 0], cmap='gray')
+
+        # prediction
+        axes[r, 1].imshow(image.predict(model_norebal).get())
+
+        # prediction (with class rebalancing)
+        axes[r, 2].imshow(image.predict(model_rebal).get())
+
+        # ground truth
+        axes[r, 3].imshow(image.get())
+
+    # plot divider
+    trans = blended_transform_factory(
+        fig.transFigure, axes[len(image_set_good) - 1, 0].transAxes)
+
+    line = Line2D([0.1, 0.925],
+                  [-0.025, -0.025],
+                  color='k',
+                  linestyle='--',
+                  transform=trans)
+
+    fig.lines.append(line)
+
+    # add titles
+    axes[0, 0].set_title("Input")
+    axes[0, 1].set_title("Classification")
+    axes[0, 2].set_title("Classification\n(w/ Rebalancing)")
+    axes[0, 3].set_title("Ground Truth")
