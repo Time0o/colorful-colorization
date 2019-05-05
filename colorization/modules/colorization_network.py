@@ -25,7 +25,7 @@ class ColorizationNetwork(nn.Module):
     DEFAULT_KERNEL_SIZE = 3
 
     def __init__(self,
-                 annealed_mean_T=0,
+                 annealed_mean_T=0.38,
                  class_rebal_lambda=None,
                  device='cuda'):
 

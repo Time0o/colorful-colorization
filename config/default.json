@@ -37,7 +37,6 @@
             "network": {
                 "type": "colorization.modules.colorization_network.ColorizationNetwork",
                 "params": {
-                    "annealed_mean_T": 0.318,
                     "class_rebal_lambda": 0.5
                 }
             },

@@ -6,14 +6,14 @@ import warnings
 
 import numpy as np
 
-import colorization.config as config
+from colorization.colorization_model import ColorizationModel
+from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
 from colorization.util.image import Image
 
 
 USAGE = \
 """run_evaluation.py [-h|--help]
-                         --config CONFIG
                          [--input-image IMAGE]
                          [--input-dir IMAGE_DIR]
                          [--output-image IMAGE]
@@ -43,10 +43,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(formatter_class=nice_help_formatter(),
                                      usage=USAGE)
-
-    parser.add_argument('--config',
-                        required=True,
-                        help="training configuration JSON file")
 
     parser.add_argument('--input-image',
                         metavar='IMAGE',
@@ -115,10 +111,8 @@ if __name__ == '__main__':
         _err("either pretrained network OR checkpoint must be specified")
 
     # load configuration file(s)
-    cfg = config.get_config(args.config)
-    cfg = config.parse_config(cfg)
-
-    model = cfg['model']
+    network = ColorizationNetwork()
+    model = ColorizationModel(network)
 
     # load pretrained weights
     if pretrained:
