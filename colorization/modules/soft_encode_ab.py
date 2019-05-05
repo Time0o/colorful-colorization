@@ -4,9 +4,9 @@ import torch
 
 
 class SoftEncodeAB:
-    def __init__(self, cielab, neighbours=5, sigma=5.0):
+    def __init__(self, cielab, neighbours=5, sigma=5.0, device='cuda'):
         self.cielab = cielab
-        self.q_to_ab = torch.from_numpy(self.cielab.q_to_ab).cuda()
+        self.q_to_ab = torch.from_numpy(self.cielab.q_to_ab).to(device)
 
         self.neighbours = neighbours
         self.sigma = sigma

@@ -2,8 +2,8 @@ import torch
 
 
 class AnnealedMeanDecodeQ:
-    def __init__(self, cielab, T):
-        self.q_to_ab = torch.from_numpy(cielab.q_to_ab).cuda()
+    def __init__(self, cielab, T, device='cuda'):
+        self.q_to_ab = torch.from_numpy(cielab.q_to_ab).to(device)
 
         self.T = T
 

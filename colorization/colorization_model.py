@@ -58,6 +58,7 @@ class ColorizationModel:
                  network,
                  loss=None,
                  optimizer=None,
+                 device='cuda',
                  log_config=None,
                  logger=None):
         """
@@ -81,6 +82,9 @@ class ColorizationModel:
                 Partially applied training optimizer, parameter argument is
                 supplied by this constructor, if this is set to `None`, the
                 model is not trainable.
+            device (str):
+                Device on which training and prediction is to be run, must be
+                either 'cpu' (default) or 'cuda'.
             log_config (dict, optional):
                 Python `logging` configuration dictionary, if this is set to
                 `None`, logging will be disabled.
@@ -93,8 +97,15 @@ class ColorizationModel:
         """
 
         self.network = network
+
         self.loss = loss
-        self.optimizer = optimizer(network.parameters())
+
+        if optimizer is None:
+            self.optimizer = None
+        else:
+            self.optimizer = optimizer(network.parameters())
+
+        self.device = device
 
         self._log_enabled = \
             _mp_spawn and log_config is not None and logger is not None
@@ -173,7 +184,7 @@ class ColorizationModel:
             for img in dataloader:
                 # move data to device
                 if dataloader.pin_memory:
-                    img = img.cuda(non_blocking=True)
+                    img = img.to(self.device, non_blocking=True)
 
                 # perform parameter update
                 self.optimizer.zero_grad()
@@ -232,7 +243,7 @@ class ColorizationModel:
         self.network.eval()
 
         # move data to device
-        img = img.cuda()
+        img = img.to(self.device)
 
         # run prediction
         with torch.no_grad():
