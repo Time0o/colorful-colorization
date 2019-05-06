@@ -5,11 +5,11 @@ from skimage import color, io, transform
 
 
 def rgb_to_lab(img):
-    return color.rgb2lab(img)
+    return color.rgb2lab(img).astype(img.dtype)
 
 
 def rgb_to_gray(img):
-    c = color.rgb2gray(img)
+    c = color.rgb2gray(img).astype(img.dtype)
 
     return np.dstack((c, c, c))
 

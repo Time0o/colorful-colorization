@@ -11,6 +11,12 @@
                         "params": {
                             "transforms": [
                                 {
+                                   "type": "colorization.data.transforms.RGBToLab"
+                                },
+                                {
+                                   "type": "torchvision.transforms.ToPILImage"
+                                },
+                                {
                                     "type": "torchvision.transforms.RandomCrop",
                                     "params": {
                                         "size": 176
@@ -18,6 +24,9 @@
                                 },
                                 {
                                    "type": "torchvision.transforms.RandomHorizontalFlip"
+                                },
+                                {
+                                   "type": "torchvision.transforms.ToTensor"
                                 }
                             ]
                         }
