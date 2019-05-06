@@ -2,21 +2,30 @@ import os
 import re
 from functools import partial
 from itertools import chain
-from math import ceil
 from operator import itemgetter
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
-from matplotlib.transforms import blended_transform_factory
+from torch.utils.data import DataLoader
 from torchvision.models import vgg16
+from torchvision import transforms
 
-from .util.image import Image, ImageSet
+from .data.image_directory import ImageDirectory
+from .data.transforms import PredictColor
+from .util.image import imread, rgb_to_lab
 
 
 _FIGURE_WIDTH = 12
 _FIGURE_SPACING = 0.05
+
+_CLASSIFY_TRANSFORMS = [
+    transforms.ToPILImage(),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+]
 
 
 def _subplots(r, c, use_gridspec=False):
@@ -80,16 +89,26 @@ def _subplot_divider(fig, axes, orientation, n):
     fig.add_artist(line)
 
 
-def _read_txt(root, txt, val_transform=id):
-    result = []
+def _dataloader(image_dir, transform=None):
+    return DataLoader(ImageDirectory(image_dir, transform=transform))
 
-    with open(os.path.join(root, txt), 'r') as f:
-        for line in f:
-            path, val = line.split()
 
-            result.append((os.path.join(root, path), val_transform(val)))
+def _torch_to_numpy(img):
+    return img[0, :, :, :].numpy()
 
-    return result
+
+def _predict_color(model, img):
+    return PredictColor(model)(img)
+
+
+def _display_progress(i, i_end, msg='processing image'):
+    fmt = "{} {}/{}"
+
+    ljust = len(fmt.format(msg, i_end, i_end))
+
+    end = '\n' if i == i_end - 1 else ''
+
+    print('\r' + fmt.format(msg, i + 1, i_end).ljust(ljust), end=end)
 
 
 def learning_curve_from_log(filename,
@@ -134,7 +153,10 @@ def learning_curve_from_log(filename,
     ax.grid()
 
 
-def annealed_mean_demo(model, image_set, ts=None, verbose=False):
+def annealed_mean_demo(model, image_dir, ts=None, verbose=False):
+    dataloader = _dataloader(image_dir)
+
+    # temperature parameters
     t_orig = model.network.decode_q.T
 
     if ts is None:
@@ -142,7 +164,8 @@ def annealed_mean_demo(model, image_set, ts=None, verbose=False):
 
     assert len(ts) % 2 == 1
 
-    _, axes = _subplots(len(image_set), len(ts), use_gridspec=True)
+    # run predictions
+    _, axes = _subplots(len(dataloader), len(ts), use_gridspec=True)
 
     for c, t in enumerate(ts):
         if verbose:
@@ -150,13 +173,13 @@ def annealed_mean_demo(model, image_set, ts=None, verbose=False):
 
         model.network.decode_q.T = t
 
-        for r, image in enumerate(image_set):
-            image_pred = image.predict_color(model)
+        for r, img in enumerate(dataloader):
+            axes[r, c].imshow(_predict_color(model, _torch_to_numpy(img)))
 
-            axes[r, c].imshow(image_pred.get())
-
+    # reset temperature parameter
     model.network.decode_q.T = t_orig
 
+    # add titles
     for i, (t, ax) in enumerate(zip(ts, axes[0, :])):
         suptitle = {
             0: "Mean",
@@ -174,36 +197,39 @@ def annealed_mean_demo(model, image_set, ts=None, verbose=False):
 
 def good_vs_bad_demo(model_norebal,
                      model_rebal,
-                     image_set_good,
-                     image_set_bad,
+                     image_dir_good,
+                     image_dir_bad,
                      verbose=False):
 
-    assert len(image_set_good) % 2 == 1
-    assert len(image_set_bad) % 2 == 1
+    dataloader_good = _dataloader(image_dir_good)
+    dataloader_bad = _dataloader(image_dir_bad)
+
+    assert len(dataloader_good) % 2 == 1
+    assert len(dataloader_bad) % 2 == 1
 
     fig, axes = _subplots(
-        len(image_set_good) + len(image_set_bad), 4, use_gridspec=False)
+        len(dataloader_good) + len(dataloader_bad), 4, use_gridspec=False)
 
-    for r, image in enumerate(chain(image_set_good, image_set_bad)):
+    for r, img in enumerate(chain(dataloader_good, dataloader_bad)):
         if verbose:
             print("running prediction for image {}".format(r + 1))
 
         # input
-        axes[r, 0].imshow(image.get('lab')[:, :, 0], cmap='gray')
+        axes[r, 0].imshow(rgb_to_lab(_torch_to_numpy(img))[:, :, 0], cmap='gray')
 
         # prediction
-        axes[r, 1].imshow(image.predict_color(model_norebal).get())
+        axes[r, 1].imshow(_predict_color(model_norebal, _torch_to_numpy(img)))
 
         # prediction (with class rebalancing)
-        axes[r, 2].imshow(image.predict_color(model_rebal).get())
+        axes[r, 2].imshow(_predict_color(model_rebal, _torch_to_numpy(img)))
 
         # ground truth
-        axes[r, 3].imshow(image.get())
+        axes[r, 3].imshow(_torch_to_numpy(img))
 
     # plot divider
     plt.tight_layout()
 
-    _subplot_divider(fig, axes, 'horizontal', len(image_set_good) - 1)
+    _subplot_divider(fig, axes, 'horizontal', len(dataloader_good) - 1)
 
     # add titles
     axes[0, 0].set_title("Input")
@@ -220,13 +246,18 @@ def amt_results_demo(model,
                      verbose=False):
 
     # parse results
-    txt = _read_txt(results_dir, 'results.txt', val_transform=float)
-    results = {Image.load(path): val for path, val in txt}
+    results = {}
+
+    with open(os.path.join(results_dir, 'results.txt'), 'r') as f:
+        for line in f:
+            path, res = line.split()
+
+            results[os.path.join(results_dir, path)] = float(res)
 
     assert len(results) >= rows * (columns_worst + columns_best)
 
     images_sorted = [
-        img for img, _ in sorted(results.items(), key=itemgetter(1))
+        path for path, _ in sorted(results.items(), key=itemgetter(1))
     ]
 
     # plot results
@@ -244,12 +275,13 @@ def amt_results_demo(model,
             if verbose:
                 print("running prediction for image {}".format(n + 1))
 
-            image = images_show[n]
+            path = images_show[n]
+            img = imread(path)
 
-            axes[r, 2 * c].imshow(image.get())
-            axes[r, 2 * c + 1].imshow(image.predict_color(model).get())
+            axes[r, 2 * c].imshow(img)
+            axes[r, 2 * c + 1].imshow(_predict_color(model, img))
 
-            axes[r, 2 * c].set_ylabel("{}%".format(int(100 * results[image])))
+            axes[r, 2 * c].set_ylabel("{}%".format(round(100 * results[path])))
 
     # plot divider
     plt.tight_layout()
@@ -271,38 +303,17 @@ def amt_results_demo(model,
     fig.suptitle(suptitle, y=0)
 
 
-def vgg_performance_demo(ctest10k_dir,
-                         classification_model=None,
-                         preprocessing_model=None,
-                         batch_size=100,
-                         verbose=False):
-
-    # load model
-    if classification_model is None:
-         classification_model = vgg16(pretrained=True)
-
-    # create image set
-    txt = _read_txt(ctest10k_dir, 'ctest10k.txt', val_transform=int)
-    paths, labels = zip(*txt)
-
-    image_set = ImageSet.from_paths(paths)
+def vgg_performance_demo(image_dir, transform=None, verbose=False):
+    dataloader = _dataloader(image_dir, [transform] + _CLASSIFY_TRANSFORMS)
+    model = vgg16(pretrained=True)
 
     # run prediction
-    labels_predicted = []
-
-    for b in range(ceil(len(image_set) / batch_size)):
-        batch_begin = b * batch_size
-        batch_end = min((b + 1) * batch_size, len(image_set))
-
+    correct = 0
+    for i, (img, label) in enumerate(dataloader):
         if verbose:
-            fmt = "running prediction for images {}...{}"
-            print(fmt.format(batch_begin + 1, batch_end))
+            _display_progress(i, len(dataloader))
 
-        batch = image_set[batch_begin:batch_end]
+        if model(img).argmax().item() == label:
+            correct += 1
 
-        labels_predicted += image_set.classify(classification_model,
-                                               preprocessing_model)
-
-    correct = np.count_nonzero(np.array(labels) == np.array(labels_predicted))
-
-    return correct / len(image_set)
+    return correct / len(dataloader)

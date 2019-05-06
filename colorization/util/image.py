@@ -29,37 +29,6 @@ def _classify(model, batch):
         return model(batch)
 
 
-class NoPreprocessing:
-    def __call__(self, img):
-        return img.get()
-
-
-class ToGrayscale:
-    def __call__(self, img):
-        return img.get(colorspace='gray')
-
-
-class Colorize:
-    def __init__(self, model):
-        self.model = model
-
-    def __call__(self, img):
-        return img.predict_color(self.model).get()
-
-
-class RandomColor:
-    def __init__(self, color_source_dir):
-        self.color_source_image_set = ImageSet.from_directory(color_source_dir)
-
-    def __call__(self, img):
-        color_source = random.choice(self.color_source_image_set)
-
-        l = img.get(colorspace='lab')[:, :, :1]
-        ab = color_source.get(colorspace='lab')[:, :, 1:]
-
-        return np.dstack((l, ab))
-
-
 class Image:
     def __init__(self, img_rgb, img_lab=None):
         self._img_rgb = img_rgb
