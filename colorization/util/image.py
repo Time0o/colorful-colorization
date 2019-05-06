@@ -7,9 +7,21 @@ import warnings
 from skimage import color, io, transform
 
 
+_INPUT_SIZE_DEFAULT = 224
+
+
+def _classify(model, batch):
+    model.eval()
+
+    with torch.no_grad():
+        return model(batch)
+
+
 class Image:
     def __init__(self, img_rgb, img_lab=None):
         self._img_rgb = img_rgb
+
+        self._img_gray = rgb_to_gray(img_rgb)
 
         if img_lab is not None:
             self._img_lab = img_lab
@@ -26,6 +38,8 @@ class Image:
     def get(self, colorspace='rgb'):
         if colorspace == 'rgb':
             return self._img_rgb
+        elif colorspace == 'gray':
+            return self._img_gray
         elif colorspace == 'lab':
             return self._img_lab
         else:
@@ -39,7 +53,7 @@ class Image:
 
         ax.axis('off')
 
-    def predict(self, model, input_size=224):
+    def predict_color(self, model, input_size=_INPUT_SIZE_DEFAULT):
         img_rgb_resized = resize(self._img_rgb, (input_size,) * 2)
         img_lab_resized = rgb_to_lab(img_rgb_resized)
 
@@ -51,6 +65,11 @@ class Image:
         img_rgb = lab_to_rgb(img_lab)
 
         return self.__class__(img_rgb, img_lab)
+
+    def classify(self, model, from_grayscale=False):
+        img = self._img_gray if from_grayscale else self._img_rgb
+
+        return _classify(model, numpy_to_torch(img)).argmax().item()
 
 
 class ImageSet:
@@ -83,9 +102,27 @@ class ImageSet:
         else:
             return self._images[i]
 
+    def predict_color(self, model, input_size=_INPUT_SIZE_DEFAULT):
+        return self.__class__(
+            [img.predict_color(model, input_size=input_size) for img in self])
+
+    def classify(self, model, from_grayscale=False):
+        batch = self._batch('gray') if from_grayscale else self._batch('rgb')
+
+        return _classify(model, batch).argmax(dim=1).numpy()
+
+    def _batch(self, colorspace='rgb'):
+        return torch.cat([numpy_to_torch(img.get(colorspace)) for img in self])
+
 
 def rgb_to_lab(img):
     return color.rgb2lab(img)
+
+
+def rgb_to_gray(img):
+    c = color.rgb2gray(img)
+
+    return np.dstack((c, c, c))
 
 
 def lab_to_rgb(img):

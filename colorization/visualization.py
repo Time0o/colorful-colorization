@@ -137,7 +137,7 @@ def annealed_mean_demo(model, image_set, ts=None, verbose=False):
         model.network.decode_q.T = t
 
         for r, image in enumerate(image_set):
-            image_pred = image.predict(model)
+            image_pred = image.predict_color(model)
 
             axes[r, c].imshow(image_pred.get())
 
@@ -178,10 +178,10 @@ def good_vs_bad_demo(model_norebal,
         axes[r, 0].imshow(image.get('lab')[:, :, 0], cmap='gray')
 
         # prediction
-        axes[r, 1].imshow(image.predict(model_norebal).get())
+        axes[r, 1].imshow(image.predict_color(model_norebal).get())
 
         # prediction (with class rebalancing)
-        axes[r, 2].imshow(image.predict(model_rebal).get())
+        axes[r, 2].imshow(image.predict_color(model_rebal).get())
 
         # ground truth
         axes[r, 3].imshow(image.get())
@@ -238,7 +238,7 @@ def amt_results_demo(model,
             image = images_show[n]
 
             axes[r, 2 * c].imshow(image.get())
-            axes[r, 2 * c + 1].imshow(image.predict(model).get())
+            axes[r, 2 * c + 1].imshow(image.predict_color(model).get())
 
             axes[r, 2 * c].set_ylabel("{}%".format(int(100 * results[image])))
 
