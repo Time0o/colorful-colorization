@@ -189,7 +189,7 @@ def good_vs_bad_demo(model_norebal,
     # plot divider
     plt.tight_layout()
 
-    _subplot_divider(fig, axes, 'horizontal', len(image_set_good))
+    _subplot_divider(fig, axes, 'horizontal', len(image_set_good) - 1)
 
     # add titles
     axes[0, 0].set_title("Input")
