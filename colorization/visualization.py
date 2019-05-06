@@ -2,6 +2,7 @@ import os
 import re
 from functools import partial
 from itertools import chain
+from math import ceil
 from operator import itemgetter
 
 import matplotlib.gridspec as gridspec
@@ -9,8 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.transforms import blended_transform_factory
+from torchvision.models import vgg16
 
-from .util.image import Image, rgb_to_lab
+from .util.image import Image, ImageSet
 
 
 _FIGURE_WIDTH = 12
@@ -76,6 +78,18 @@ def _subplot_divider(fig, axes, orientation, n):
         raise ValueError("orientation must be 'horizontal' or 'vertical'")
 
     fig.add_artist(line)
+
+
+def _read_txt(root, txt, val_transform=id):
+    result = []
+
+    with open(os.path.join(root, txt), 'r') as f:
+        for line in f:
+            path, val = line.split()
+
+            result.append((os.path.join(root, path), val_transform(val)))
+
+    return result
 
 
 def learning_curve_from_log(filename,
@@ -206,13 +220,8 @@ def amt_results_demo(model,
                      verbose=False):
 
     # parse results
-    results = {}
-
-    with open(os.path.join(results_dir, 'results.txt'), 'r') as f:
-        for line in f:
-            path, result = line.split()
-
-            results[Image.load(os.path.join(results_dir, path))] = float(result)
+    txt = _read_txt(results_dir, 'results.txt', val_transform=float)
+    results = {Image.load(path): val for path, val in txt}
 
     assert len(results) >= rows * (columns_worst + columns_best)
 
@@ -260,3 +269,40 @@ def amt_results_demo(model,
                           r'$\longrightarrow$ Fooled less often')
 
     fig.suptitle(suptitle, y=0)
+
+
+def vgg_performance_demo(ctest10k_dir,
+                         classification_model=None,
+                         preprocessing_model=None,
+                         batch_size=100,
+                         verbose=False):
+
+    # load model
+    if classification_model is None:
+         classification_model = vgg16(pretrained=True)
+
+    # create image set
+    txt = _read_txt(ctest10k_dir, 'ctest10k.txt', val_transform=int)
+    paths, labels = zip(*txt)
+
+    image_set = ImageSet.from_paths(paths)
+
+    # run prediction
+    labels_predicted = []
+
+    for b in range(ceil(len(image_set) / batch_size)):
+        batch_begin = b * batch_size
+        batch_end = min((b + 1) * batch_size, len(image_set))
+
+        if verbose:
+            fmt = "running prediction for images {}...{}"
+            print(fmt.format(batch_begin + 1, batch_end))
+
+        batch = image_set[batch_begin:batch_end]
+
+        labels_predicted += image_set.classify(classification_model,
+                                               preprocessing_model)
+
+    correct = np.count_nonzero(np.array(labels) == np.array(labels_predicted))
+
+    return correct / len(image_set)
