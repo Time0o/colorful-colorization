@@ -1,4 +1,5 @@
 import os
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,22 +7,62 @@ import torch
 import warnings
 from skimage import color, io, transform
 
+import torchvision.transforms as transforms
+
 
 _INPUT_SIZE_DEFAULT = 224
 
+_CLASSIFY_TRANSFORM = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.CenterCrop(_INPUT_SIZE_DEFAULT),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
 
 def _classify(model, batch):
+    batch = torch.stack([_CLASSIFY_TRANSFORM(img) for img in batch])
+
     model.eval()
 
     with torch.no_grad():
         return model(batch)
 
 
+class NoPreprocessing:
+    def __call__(self, img):
+        return img.get()
+
+
+class ToGrayscale:
+    def __call__(self, img):
+        return img.get(colorspace='gray')
+
+
+class Colorize:
+    def __init__(self, model):
+        self.model = model
+
+    def __call__(self, img):
+        return img.predict_color(self.model).get()
+
+
+class RandomColor:
+    def __init__(self, color_source_dir):
+        self.color_source_image_set = ImageSet.from_directory(color_source_dir)
+
+    def __call__(self, img):
+        color_source = random.choice(self.color_source_image_set)
+
+        l = img.get(colorspace='lab')[:, :, :1]
+        ab = color_source.get(colorspace='lab')[:, :, 1:]
+
+        return np.dstack((l, ab))
+
+
 class Image:
     def __init__(self, img_rgb, img_lab=None):
         self._img_rgb = img_rgb
-
-        self._img_gray = rgb_to_gray(img_rgb)
 
         if img_lab is not None:
             self._img_lab = img_lab
@@ -39,7 +80,7 @@ class Image:
         if colorspace == 'rgb':
             return self._img_rgb
         elif colorspace == 'gray':
-            return self._img_gray
+            return rgb_to_gray(self._img_rgb)
         elif colorspace == 'lab':
             return self._img_lab
         else:
@@ -60,16 +101,21 @@ class Image:
         l_batch = numpy_to_torch(img_lab_resized[:, :, :1])
         ab_pred = torch_to_numpy(model.predict(l_batch))
         ab_pred_resized = resize(ab_pred, self._img_rgb.shape[:2])
-
         img_lab = np.dstack((self._img_lab[:, :, :1], ab_pred_resized))
         img_rgb = lab_to_rgb(img_lab)
 
         return self.__class__(img_rgb, img_lab)
 
-    def classify(self, model, from_grayscale=False):
-        img = self._img_gray if from_grayscale else self._img_rgb
+    def classify(self,
+                 classification_model,
+                 preprocessing_model=None):
 
-        return _classify(model, numpy_to_torch(img)).argmax().item()
+        if preprocessing_model is None:
+            preprocessing_model = NoPreprocessing()
+
+        img = numpy_to_torch(preprocessing_model(self))
+
+        return _classify(classification_model, img).argmax().item()
 
 
 class ImageSet:
@@ -106,13 +152,22 @@ class ImageSet:
         return self.__class__(
             [img.predict_color(model, input_size=input_size) for img in self])
 
-    def classify(self, model, from_grayscale=False):
-        batch = self._batch('gray') if from_grayscale else self._batch('rgb')
+    def classify(self,
+                 classification_model,
+                 preprocessing_model=None):
 
-        return _classify(model, batch).argmax(dim=1).numpy()
+        if preprocessing_model is None:
+            preprocessing_model = NoPreprocessing()
 
-    def _batch(self, colorspace='rgb'):
-        return torch.cat([numpy_to_torch(img.get(colorspace)) for img in self])
+        batch = self._batch(preprocessing_model)
+
+        out = _classify(classification_model, batch)
+
+        return list(out.argmax(dim=1).numpy())
+
+    def _batch(self, preprocessing_model):
+        return torch.cat(
+            [numpy_to_torch(preprocessing_model(img)) for img in self])
 
 
 def rgb_to_lab(img):
