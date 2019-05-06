@@ -83,8 +83,9 @@ class ColorizationNetwork(nn.Module):
         self.class_rebal_lambda = class_rebal_lambda
 
         if class_rebal_lambda is not None:
-            self.get_class_weights = GetClassWeights(
-                DEFAULT_CIELAB, lambda_=class_rebal_lambda)
+            self.get_class_weights = GetClassWeights(DEFAULT_CIELAB,
+                                                     lambda_=class_rebal_lambda,
+                                                     device=self.device)
 
             self.rebalance_loss = RebalanceLoss.apply
 
