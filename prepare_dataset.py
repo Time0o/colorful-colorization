@@ -130,7 +130,11 @@ def _split_dataset(data_dir,
             if not clean and resize_height is None:
                 move(f, subdir_path)
             else:
-                img = imread(f)
+                try:
+                    img = imread(f)
+                except:
+                    os.remove(f)
+                    continue
 
                 if clean:
                     # remove non-RGB images
