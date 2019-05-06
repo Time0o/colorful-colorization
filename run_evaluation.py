@@ -7,9 +7,10 @@ import warnings
 import numpy as np
 
 from colorization.colorization_model import ColorizationModel
+from colorization.data.transforms import PredictColor
 from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
-from colorization.util.image import Image
+from colorization.util.image import imread, imsave
 
 
 USAGE = \
@@ -30,10 +31,8 @@ def _err(msg):
     raise ValueError(msg)
 
 
-def _predict_image(input_image, output_image):
-    img = Image.load(input_image)
-    img_pred = img.predict(model)
-    img_pred.save(output_image)
+def _predict_image(model, input_image, output_image):
+    imsave(output_image, PredictColor(model)(imread(input_image)))
 
 
 if __name__ == '__main__':
@@ -81,6 +80,10 @@ if __name__ == '__main__':
                                  "corresponding to the most recent checkpoint "
                                  "is used to perform prediction"))
 
+    parser.add_argument('--gpu',
+                        action='store_true',
+                        help="run prediction on GPU")
+
     parser.add_argument('--verbose',
                         action='store_true',
                         help="display progress")
@@ -111,8 +114,10 @@ if __name__ == '__main__':
         _err("either pretrained network OR checkpoint must be specified")
 
     # load configuration file(s)
-    network = ColorizationNetwork()
-    model = ColorizationModel(network)
+    device = 'cuda' if args.gpu else 'cpu'
+
+    network = ColorizationNetwork(device=device)
+    model = ColorizationModel(network, device=device)
 
     # load pretrained weights
     if pretrained:
@@ -129,7 +134,7 @@ if __name__ == '__main__':
 
     # predicted image(s)
     if args.input_image is not None:
-        _predict_image(args.input_image, args.output_image)
+        _predict_image(model, args.input_image, args.output_image)
     elif args.input_dir is not None:
         if not os.path.exists(args.output_dir):
             os.mkdir(args.output_dir)
@@ -141,4 +146,4 @@ if __name__ == '__main__':
             in_image = os.path.join(args.input_dir, image)
             out_image = os.path.join(args.output_dir, image)
 
-            _predict_image(in_image, out_image)
+            _predict_image(model, in_image, out_image)
