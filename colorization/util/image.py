@@ -69,7 +69,12 @@ def torch_to_numpy(batch):
 
 
 def resize(img, size):
-    return transform.resize(img, size, mode='reflect', anti_aliasing=True)
+    res = transform.resize(img, size, mode='reflect', anti_aliasing=True)
+
+    if img.dtype == np.uint8:
+        res *= 255
+
+    return res.astype(img.dtype)
 
 
 def imread(path):
