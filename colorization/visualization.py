@@ -86,16 +86,14 @@ def _subplot_divider(fig, axes, orientation, n):
     fig.add_artist(line)
 
 
-def _dataloader(image_dir, transform=None):
-    return DataLoader(ImageDirectory(image_dir, transform=transform))
+def _dataloader(image_dir, labeled=False, transform=None):
+    dataset = ImageDirectory(image_dir, labeled=labeled, transform=transform)
+
+    return DataLoader(dataset)
 
 
 def _torch_to_numpy(img):
     return img[0, :, :, :].numpy()
-
-
-def _predict_color(model, img):
-    return PredictColor(model)(img)
 
 
 def _display_progress(i, i_end, msg='processing image'):
@@ -106,6 +104,22 @@ def _display_progress(i, i_end, msg='processing image'):
     end = '\n' if i == i_end - 1 else ''
 
     print('\r' + fmt.format(msg, i + 1, i_end).ljust(ljust), end=end)
+
+
+def _raw_accuracy(ab_pred, ab_label, thresh):
+    dist = np.linalg.norm(ab_label - ab_pred, axis=2)
+    within_thresh = np.count_nonzero(dist <= thresh)
+    total = np.prod(ab_label.shape[:2])
+
+    return within_thresh / total
+
+
+def _auc(ab_pred, ab_label, thresh_min=0, thresh_max=151, thresh_step=10):
+    thresh = np.arange(thresh_min, thresh_max, thresh_step)
+
+    aucs = [_raw_accuracy(ab_pred, ab_label, t) for t in thresh]
+
+    return sum(aucs) / len(thresh)
 
 
 def learning_curve_from_log(filename,
@@ -168,7 +182,7 @@ def annealed_mean_demo(model, image_dir, ts=None, verbose=False):
         model.network.decode_q.T = t
 
         for r, img in enumerate(dataloader):
-            axes[r, c].imshow(_predict_color(model, _torch_to_numpy(img)))
+            axes[r, c].imshow(PredictColor(model)(_torch_to_numpy(img)))
 
     # reset temperature parameter
     model.network.decode_q.T = t_orig
@@ -212,10 +226,10 @@ def good_vs_bad_demo(model_norebal,
         axes[r, 0].imshow(rgb_to_lab(_torch_to_numpy(img))[:, :, 0], cmap='gray')
 
         # prediction
-        axes[r, 1].imshow(_predict_color(model_norebal, _torch_to_numpy(img)))
+        axes[r, 1].imshow(PredictColor(model_norebal)(_torch_to_numpy(img)))
 
         # prediction (with class rebalancing)
-        axes[r, 2].imshow(_predict_color(model_rebal, _torch_to_numpy(img)))
+        axes[r, 2].imshow(PredictColor(model_rebal)(_torch_to_numpy(img)))
 
         # ground truth
         axes[r, 3].imshow(_torch_to_numpy(img))
@@ -273,7 +287,7 @@ def amt_results_demo(model,
             img = imread(path)
 
             axes[r, 2 * c].imshow(img)
-            axes[r, 2 * c + 1].imshow(_predict_color(model, img))
+            axes[r, 2 * c + 1].imshow(PredictColor(model)(img))
 
             axes[r, 2 * c].set_ylabel("{}%".format(round(100 * results[path])))
 
@@ -335,3 +349,24 @@ def classification_performance_demo(model,
                 correct += 1
 
     return correct / len(dataloader)
+
+
+def raw_accuracy_demo(model, image_dir, verbose=False):
+    dataloader = _dataloader(image_dir, labeled=False)
+
+    predict_color = PredictColor(model, output_lab=True)
+
+    auc_total = 0
+
+    for i, img in enumerate(dataloader):
+        if verbose:
+            _display_progress(i, len(dataloader))
+
+        img_rgb = _torch_to_numpy(img)
+        img_lab = rgb_to_lab(img_rgb)
+
+        img_pred = predict_color(img_rgb)
+
+        auc_total += _auc(img_lab[:, :, 1:], img_pred[:, :, 1:])
+
+    return auc_total / len(dataloader)

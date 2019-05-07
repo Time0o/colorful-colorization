@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+import torch
 
 from ..util.image import images_in_directory, \
                          imread, \
@@ -36,9 +37,14 @@ class RandomColor:
 
 
 class PredictColor:
-    def __init__(self, model, input_size=224):
+    def __init__(self,
+                 model,
+                 input_size=224,
+                 output_lab=False):
+
         self.model = model
         self.input_size = input_size
+        self.output_lab = output_lab
 
     def __call__(self, img_rgb):
         img_lab = rgb_to_lab(img_rgb)
@@ -52,4 +58,7 @@ class PredictColor:
         ab_pred_resized = resize(ab_pred, img_rgb.shape[:2])
         img_lab = np.dstack((img_lab[:, :, :1], ab_pred_resized))
 
-        return lab_to_rgb(img_lab)
+        if self.output_lab:
+            return img_lab
+        else:
+            return lab_to_rgb(img_lab)

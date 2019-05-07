@@ -8,8 +8,9 @@ from ..util.image import images_in_directory, imread
 class ImageDirectory(Dataset):
     LABEL_FILENAME = 'labels.txt'
 
-    def __init__(self, root, transform=None, label_transform=int):
+    def __init__(self, root, labeled=True, transform=None, label_transform=int):
         self.root = root
+        self.labeled = labeled
         self.transform = transform
         self.label_transform = label_transform
 
@@ -23,7 +24,7 @@ class ImageDirectory(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        if self._labels is not None:
+        if self.labeled:
             return img, self._labels[index]
         else:
             return img
@@ -47,10 +48,14 @@ class ImageDirectory(Dataset):
         # build list of image paths
         self._paths = images_in_directory(self.root)
 
+        if not self.labeled:
+            return
+
         # check whether label file exists
         labels_path = os.path.join(self._root, self.LABEL_FILENAME)
 
         if not os.path.exists(labels_path):
+            self.labeled = False
             return
 
         # if so, build list of labels
