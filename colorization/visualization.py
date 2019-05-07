@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from torchvision.models import vgg16
 from torchvision import transforms
 
+from .cielab import DEFAULT_CIELAB
 from .data.image_directory import ImageDirectory
 from .data.transforms import PredictColor
 from .util.image import imread, rgb_to_lab
@@ -106,18 +107,45 @@ def _display_progress(i, i_end, msg='processing image'):
     print('\r' + fmt.format(msg, i + 1, i_end).ljust(ljust), end=end)
 
 
-def _raw_accuracy(ab_pred, ab_label, thresh):
+def _raw_accuracy(ab_pred, ab_label, thresh, reweigh_classes=False):
+    if reweigh_classes:
+        # bin ground truth pixels
+        q = DEFAULT_CIELAB.bin_ab(ab_pred)
+
+        # get pixel weights
+        pixel_weights = 1 / DEFAULT_CIELAB.gamut.prior[q]
+        pixel_weights /= pixel_weights.sum()
+
+    # find pixels not exceeding threshold distance
     dist = np.linalg.norm(ab_label - ab_pred, axis=2)
-    within_thresh = np.count_nonzero(dist <= thresh)
-    total = np.prod(ab_label.shape[:2])
 
-    return within_thresh / total
+    within_thresh = dist <= thresh
+    num_within_thresh = np.count_nonzero(within_thresh)
+
+    if num_within_thresh == 0:
+        return 0
+
+    if reweigh_classes:
+        return (within_thresh * pixel_weights).sum()
+    else:
+        return num_within_thresh / np.prod(within_thresh.shape[:2])
 
 
-def _auc(ab_pred, ab_label, thresh_min=0, thresh_max=151, thresh_step=10):
+def _auc(ab_pred,
+         ab_label,
+         thresh_min=0,
+         thresh_max=151,
+         thresh_step=10,
+         reweigh_classes=False):
+
     thresh = np.arange(thresh_min, thresh_max, thresh_step)
 
-    aucs = [_raw_accuracy(ab_pred, ab_label, t) for t in thresh]
+    raw_acc = partial(_raw_accuracy,
+                      ab_pred,
+                      ab_label,
+                      reweigh_classes=reweigh_classes)
+
+    aucs = [raw_acc(t) for t in thresh]
 
     return sum(aucs) / len(thresh)
 
@@ -351,7 +379,7 @@ def classification_performance_demo(model,
     return correct / len(dataloader)
 
 
-def raw_accuracy_demo(model, image_dir, verbose=False):
+def raw_accuracy_demo(model, image_dir, reweigh_classes=False, verbose=False):
     dataloader = _dataloader(image_dir, labeled=False)
 
     predict_color = PredictColor(model, output_lab=True)
@@ -367,6 +395,8 @@ def raw_accuracy_demo(model, image_dir, verbose=False):
 
         img_pred = predict_color(img_rgb)
 
-        auc_total += _auc(img_lab[:, :, 1:], img_pred[:, :, 1:])
+        auc_total += _auc(img_lab[:, :, 1:],
+                          img_pred[:, :, 1:],
+                          reweigh_classes=reweigh_classes)
 
     return auc_total / len(dataloader)

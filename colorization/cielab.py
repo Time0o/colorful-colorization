@@ -156,6 +156,13 @@ class CIELAB:
         # invert y-axis
         ax.invert_yaxis()
 
+    def bin_ab(self, ab):
+        ab_discrete = ((ab + 110) / self.AB_RANGE[2]).astype(int)
+
+        a, b = np.hsplit(ab_discrete.reshape(-1, 2), 2)
+
+        return self.ab_to_q[a, b].reshape(*ab.shape[:2])
+
     def plot_ab_gamut(self, l=50, ax=None):
         assert l >= 50 and l <= 100
 
