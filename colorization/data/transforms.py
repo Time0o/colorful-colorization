@@ -1,7 +1,15 @@
+import random
+
 import numpy as np
 
-from ..util.image import \
-    lab_to_rgb, numpy_to_torch, resize, rgb_to_gray, rgb_to_lab, torch_to_numpy
+from ..util.image import images_in_directory, \
+                         imread, \
+                         lab_to_rgb, \
+                         numpy_to_torch, \
+                         resize, \
+                         rgb_to_gray, \
+                         rgb_to_lab, \
+                         torch_to_numpy
 
 
 class RGBToGray:
@@ -12,6 +20,19 @@ class RGBToGray:
 class RGBToLab:
     def __call__(self, img):
         return rgb_to_lab(img)
+
+
+class RandomColor:
+    def __init__(self, color_source_dir):
+        self._color_source_images = images_in_directory(color_source_dir)
+
+    def __call__(self, img):
+        l = rgb_to_lab(img)[:, :, :1]
+
+        random_image = imread(random.choice(self._color_source_images))
+        random_ab = rgb_to_lab(random_image)[:, :, 1:]
+
+        return lab_to_rgb(np.dstack((l, random_ab)))
 
 
 class PredictColor:

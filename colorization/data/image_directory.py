@@ -1,10 +1,8 @@
 import os
-from glob import glob
-from mimetypes import types_map
 
 from torch.utils.data.dataset import Dataset
 
-from ..util.image import imread
+from ..util.image import images_in_directory, imread
 
 
 class ImageDirectory(Dataset):
@@ -47,13 +45,7 @@ class ImageDirectory(Dataset):
 
     def _get_paths(self):
         # build list of image paths
-        image_extensions = self._image_extensions()
-
-        for path in glob(os.path.join(self.root, '*')):
-            ext = path.rsplit('.')[-1].lower()
-
-            if any([ext == ext_ for ext_ in image_extensions]):
-                self._paths.append(path)
+        self._paths = images_in_directory(self.root)
 
         # check whether label file exists
         labels_path = os.path.join(self._root, self.LABEL_FILENAME)
@@ -74,12 +66,3 @@ class ImageDirectory(Dataset):
                 label_dict[path] = val
 
         self._labels = [label_dict[path] for path in self._paths]
-
-    @staticmethod
-    def _image_extensions():
-        extensions = []
-        for ext, t in types_map.items():
-            if t.split('/')[0] == 'image':
-                extensions.append(ext[1:])
-
-        return extensions

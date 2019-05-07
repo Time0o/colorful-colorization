@@ -1,7 +1,34 @@
+import os
+import warnings
+from glob import glob
+from mimetypes import types_map
+
 import numpy as np
 import torch
-import warnings
 from skimage import color, io, transform
+
+
+def image_extensions():
+    extensions = []
+    for ext, t in types_map.items():
+        if t.split('/')[0] == 'image':
+            extensions.append(ext[1:])
+
+    return extensions
+
+
+def images_in_directory(root):
+    paths = []
+
+    extensions = image_extensions()
+
+    for path in glob(os.path.join(root, '*')):
+        ext = path.rsplit('.')[-1].lower()
+
+        if any([ext == ext_ for ext_ in extensions]):
+            paths.append(path)
+
+    return paths
 
 
 def rgb_to_lab(img):
