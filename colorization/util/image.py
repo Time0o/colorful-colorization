@@ -5,23 +5,26 @@ from skimage import color, io, transform
 
 
 def rgb_to_lab(img):
-    return color.rgb2lab(img).astype(img.dtype)
+    assert img.dtype == np.uint8
+
+    return color.rgb2lab(img).astype(np.float32)
 
 
 def rgb_to_gray(img):
-    c = color.rgb2gray(img).astype(img.dtype)
+    assert img.dtype == np.uint8
+
+    c = (255 * color.rgb2gray(img)).astype(np.uint8)
 
     return np.dstack((c, c, c))
 
 
 def lab_to_rgb(img):
+    assert img.dtype == np.float32
+
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
 
-        img_float = np.clip(color.lab2rgb(img), 0, 1)
-        img_uint8 = (255 * img_float).astype(np.uint8)
-
-        return img_uint8
+        return (255 * np.clip(color.lab2rgb(img), 0, 1)).astype(np.uint8)
 
 
 def numpy_to_torch(img):
