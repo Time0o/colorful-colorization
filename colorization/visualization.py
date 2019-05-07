@@ -28,7 +28,7 @@ _CLASSIFY_TRANSFORMS = [
 ]
 
 
-def _subplots(r, c, use_gridspec=False):
+def _subplots(r=1, c=1, use_gridspec=False, no_ticks=True):
     display_width = (_FIGURE_WIDTH - (c - 1) * _FIGURE_SPACING) / c
     figure_height = r * display_width + (r - 1) * _FIGURE_SPACING
 
@@ -45,20 +45,23 @@ def _subplots(r, c, use_gridspec=False):
                 axes[r_, c_] = plt.subplot(gs[r_ * c + c_])
     else:
         fig, axes = plt.subplots(r, c, figsize=(_FIGURE_WIDTH, figure_height))
-        axes = axes.reshape(r, c)
 
-    for ax in axes.flatten():
-        ax.tick_params(
-            axis='both',
-            which='both',
-            bottom=False,
-            top=False,
-            left=False,
-            right=False,
-            labelbottom=False,
-            labeltop=False,
-            labelleft=False,
-            labelright=False)
+        if not (r == 1 and c == 1):
+            axes = axes.reshape(r, c)
+
+    if no_ticks:
+        for ax in ([axes] if r == c == 1 else axes.flatten()):
+            ax.tick_params(
+                axis='both',
+                which='both',
+                bottom=False,
+                top=False,
+                left=False,
+                right=False,
+                labelbottom=False,
+                labeltop=False,
+                labelleft=False,
+                labelright=False)
 
     return fig, axes
 
@@ -116,7 +119,7 @@ def learning_curve_from_log(filename,
                             smoothing_alpha=0.05,
                             ax=None):
 
-    _, ax = _subplots()
+    _, ax = _subplots(no_ticks=False)
 
     # create loss curve
     losses = []
@@ -138,13 +141,9 @@ def learning_curve_from_log(filename,
 
         losses_smoothed.append(loss_smoothed)
 
-    # convert to log
-    losses = np.log(losses)
-    losses_smoothed = np.log(losses_smoothed)
-
     # plot loss curves
-    p = ax.plot(iterations, losses, alpha=.5)
-    ax.plot(iterations, losses_smoothed, color=p[0].get_color())
+    p = ax.semilogy(iterations, losses, alpha=.5)
+    ax.semilogy(iterations, losses_smoothed, color=p[0].get_color())
 
     # format plot
     ax.set_xlabel("Iteration")
