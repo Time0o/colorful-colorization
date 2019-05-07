@@ -113,7 +113,8 @@ def learning_curve_from_log(filename,
                             smoothing_alpha=0.05,
                             ax=None):
 
-    _, ax = _subplots(no_ticks=False)
+    if ax is None:
+        _, ax = _subplots(no_ticks=False)
 
     # create loss curve
     losses = []
