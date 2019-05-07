@@ -46,6 +46,13 @@ class StandardDataset(Dataset):
             fmt = "not a directory: '{}'"
             raise ValueError(fmt.format(root))
 
+        subdirs = [self.DATASET_TRAIN, self.DATASET_VAL, self.DATASET_TEST]
+
+        for subdir in subdirs:
+            if not os.path.exists(os.path.join(root, subdir)):
+                fmt = "missing '{}' subdirectory"
+                raise ValueError(fmt.format(subdir))
+
         self._root = root
 
     @property
