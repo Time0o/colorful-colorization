@@ -7,6 +7,7 @@ from operator import itemgetter
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from matplotlib.lines import Line2D
 from torch.utils.data import DataLoader
 from torchvision.models import vgg16
@@ -19,13 +20,6 @@ from .util.image import imread, rgb_to_lab
 
 _FIGURE_WIDTH = 12
 _FIGURE_SPACING = 0.05
-
-_CLASSIFY_TRANSFORMS = [
-    transforms.ToPILImage(),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-]
 
 
 def _subplots(r=1, c=1, use_gridspec=False, no_ticks=True):
@@ -302,17 +296,41 @@ def amt_results_demo(model,
     fig.suptitle(suptitle, y=0)
 
 
-def vgg_performance_demo(image_dir, transform=None, verbose=False):
-    dataloader = _dataloader(image_dir, [transform] + _CLASSIFY_TRANSFORMS)
-    model = vgg16(pretrained=True)
+def classification_performance_demo(model,
+                                    image_dir,
+                                    transform=None,
+                                    device='cuda',
+                                    verbose=False):
+
+    # create dataloader
+    tr = [
+        transforms.ToPILImage(),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ]
+
+    if transform is not None:
+        tr = [transform] + tr
+
+    dataloader = _dataloader(image_dir, transform=transforms.Compose(tr))
+
+    # create classification model
+    model = model.to(device)
+
+    model.eval()
 
     # run prediction
-    correct = 0
-    for i, (img, label) in enumerate(dataloader):
-        if verbose:
-            _display_progress(i, len(dataloader))
+    with torch.no_grad():
+        correct = 0
+        for i, (img, label) in enumerate(dataloader):
+            img = img.to(device)
 
-        if model(img).argmax().item() == label:
-            correct += 1
+            if verbose:
+                _display_progress(i, len(dataloader))
+
+            if model(img).argmax().item() == label:
+                correct += 1
 
     return correct / len(dataloader)
