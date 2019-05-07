@@ -13,6 +13,11 @@ from ..util.image import images_in_directory, \
                          torch_to_numpy
 
 
+class ToNumpy:
+    def __call__(self, img):
+        return np.array(img)
+
+
 class RGBToGray:
     def __call__(self, img):
         return rgb_to_gray(img)

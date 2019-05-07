@@ -11,9 +11,6 @@
                         "params": {
                             "transforms": [
                                 {
-                                   "type": "colorization.data.transforms.RGBToLab"
-                                },
-                                {
                                    "type": "torchvision.transforms.ToPILImage"
                                 },
                                 {
@@ -24,6 +21,12 @@
                                 },
                                 {
                                    "type": "torchvision.transforms.RandomHorizontalFlip"
+                                },
+                                {
+                                   "type": "colorization.data.transforms.ToNumpy"
+                                },
+                                {
+                                   "type": "colorization.data.transforms.RGBToLab"
                                 },
                                 {
                                    "type": "torchvision.transforms.ToTensor"
