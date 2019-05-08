@@ -1,6 +1,5 @@
 import os
 import warnings
-from glob import glob
 from mimetypes import types_map
 
 import numpy as np
@@ -17,18 +16,31 @@ def image_extensions():
     return extensions
 
 
-def images_in_directory(root):
+def images_in_directory(root, exclude_root=False):
+    if not os.path.exists(root):
+        raise ValueError("directory '{}' does not exist".format(root))
+
     paths = []
 
     extensions = image_extensions()
 
-    for path in glob(os.path.join(root, '*')):
+    for path in sorted(os.listdir(root)):
         ext = path.rsplit('.')[-1].lower()
 
         if any([ext == ext_ for ext_ in extensions]):
-            paths.append(path)
+            if exclude_root:
+                paths.append(path)
+            else:
+                paths.append(os.path.join(root, path))
+
+    if not paths:
+        raise ValueError("directory '{}' does not contain images".format(root))
 
     return paths
+
+
+def is_rgb(img):
+    return len(img.shape) == 3 and img.shape[2] == 3
 
 
 def rgb_to_lab(img):

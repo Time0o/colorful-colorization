@@ -1,5 +1,6 @@
 import os
 
+import torch
 from torch.utils.data.dataset import Dataset
 
 from ..util.image import images_in_directory, imread
@@ -8,29 +9,41 @@ from ..util.image import images_in_directory, imread
 class ImageDirectory(Dataset):
     LABEL_FILENAME = 'labels.txt'
 
-    def __init__(self, root, labeled=True, transform=None, label_transform=int):
-        self.root = root
-        self.labeled = labeled
-        self.transform = transform
-        self.label_transform = label_transform
+    def __init__(self,
+                 root,
+                 return_labels=True,
+                 return_filenames=False,
+                 transform=None):
 
-        self._paths = []
+        self.root = root
+        self.transform = transform
+        self.return_labels = return_labels
+        self.return_filenames = return_filenames
+
+        self._files = []
         self._labels = None
         self._get_paths()
 
     def __getitem__(self, index):
-        img = imread(self._paths[index])
+        filename = self._files[index]
+
+        img = imread(os.path.join(self.root, filename))
 
         if self.transform:
             img = self.transform(img)
 
-        if self.labeled:
-            return img, self._labels[index]
-        else:
-            return img
+        ret = [img]
+
+        if self.return_labels:
+            ret.append(torch.tensor([self._labels[index]]))
+
+        if self.return_filenames:
+            ret.append(filename)
+
+        return ret[0] if len(ret) == 1 else ret
 
     def __len__(self):
-        return len(self._paths)
+        return len(self._files)
 
     @property
     def root(self):
@@ -46,16 +59,16 @@ class ImageDirectory(Dataset):
 
     def _get_paths(self):
         # build list of image paths
-        self._paths = images_in_directory(self.root)
+        self._files = images_in_directory(self.root, exclude_root=True)
 
-        if not self.labeled:
+        if not self.return_labels:
             return
 
         # check whether label file exists
         labels_path = os.path.join(self._root, self.LABEL_FILENAME)
 
         if not os.path.exists(labels_path):
-            self.labeled = False
+            self.return_labels = False
             return
 
         # if so, build list of labels
@@ -65,9 +78,6 @@ class ImageDirectory(Dataset):
             for line in f:
                 path, val = line.split()
 
-                path = os.path.join(self._root, path)
-                val = self.label_transform(val)
+                label_dict[path] = int(val)
 
-                label_dict[path] = val
-
-        self._labels = [label_dict[path] for path in self._paths]
+        self._labels = [label_dict[path] for path in self._files]

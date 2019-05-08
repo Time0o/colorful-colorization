@@ -3,14 +3,7 @@ import random
 import numpy as np
 import torch
 
-from ..util.image import images_in_directory, \
-                         imread, \
-                         lab_to_rgb, \
-                         numpy_to_torch, \
-                         resize, \
-                         rgb_to_gray, \
-                         rgb_to_lab, \
-                         torch_to_numpy
+from ..util.image import *
 
 
 class ToNumpy:
@@ -26,6 +19,14 @@ class RGBToGray:
 class RGBToLab:
     def __call__(self, img):
         return rgb_to_lab(img)
+
+
+class RGBOrGrayToL:
+    def __call__(self, img):
+        if is_rgb(img):
+            return rgb_to_lab(img)[:, :, :1]
+        else:
+            return img.reshape(*img.shape[:2], 1)
 
 
 class RandomColor:
