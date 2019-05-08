@@ -146,7 +146,7 @@ class ColorizationModel:
 
         # restore from checkpoint
         if checkpoint_init is not None:
-            self._load_checkpoint(checkpoint_init, load_optimizer=True)
+            self.load_checkpoint(checkpoint_init, load_optimizer=True)
             epoch_init = self._checkpoint_epoch(checkpoint_init)
 
         # validate checkpoint directory
@@ -251,16 +251,41 @@ class ColorizationModel:
 
         return img_pred
 
-    def restore(self, checkpoint_path):
-        """Initialize model weights from a training checkpoint.
+    def save_checkpoint(self, path, save_optimizer=False):
+        """Save network weights to checkpoint.
 
         Args:
-            checkpoint_path (str):
-                Path to the training checkpoint.
+            path (str):
+                Path to the checkpoint.
+            save_optimizer (bool):
+                If `True`, save optimizer state as well.
 
         """
+        state = {
+            'network': self.network.state_dict(),
+        }
 
-        self._load_checkpoint(checkpoint_path)
+        if save_optimizer:
+            state['optimizer'] = self.optimizer.state_dict()
+
+        torch.save(state, path)
+
+    def load_checkpoint(self, path, load_optimizer=False):
+        """Initialize model weights from checkpoint.
+
+        Args:
+            path (str):
+                Path to the checkpoint.
+            load_optimizer (bool):
+                If `True`, load optimizer state as well.
+
+        """
+        state = torch.load(path)
+
+        self.network.load_state_dict(state['network'])
+
+        if load_optimizer:
+            self.optimizer.load_state_dict(state['optimizer'])
 
     @classmethod
     def find_latest_checkpoint(cls, checkpoint_dir, skip_final=False):
@@ -308,26 +333,13 @@ class ColorizationModel:
         return checkpoint_path
 
     def _checkpoint_training(self, checkpoint_dir, checkpoint_epoch):
-        state = {
-            'network': self.network.state_dict(),
-            'optimizer': self.optimizer.state_dict()
-        }
-
         path = self._checkpoint_path(checkpoint_dir, checkpoint_epoch)
 
-        torch.save(state, path)
+        self.save_checkpoint(path, save_optimizer=True)
 
         if self._log_enabled:
             fmt = "saved checkpoint '{}'"
             self._log_queue.put(fmt.format(os.path.basename(path)))
-
-    def _load_checkpoint(self, checkpoint_path, load_optimizer=False):
-        state =  torch.load(checkpoint_path)
-
-        self.network.load_state_dict(state['network'])
-
-        if load_optimizer:
-            self.optimizer.load_state_dict(state['optimizer'])
 
     @staticmethod
     def _validate_checkpoint_dir(checkpoint_dir, resuming=False):
