@@ -57,11 +57,14 @@
                 "type": "colorization.modules.cross_entropy_loss_2d.CrossEntropyLoss2d"
             },
             "optimizer": {
-                "type": "torch.optim.Adam",
+                "type": "colorization.util.optim_wrapper.OptimWrapper",
                 "params": {
-                    "lr": 3.16e-5,
-                    "betas": [0.9, 0.99],
-                    "weight_decay": 1e-3
+                    "optim_type": "Adam",
+                    "optim_params": {
+                        "lr": 3.16e-5,
+                        "betas": [0.9, 0.99],
+                        "weight_decay": 1e-3
+                    }
                 }
             },
             "log_config": {

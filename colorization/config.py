@@ -132,12 +132,7 @@ def _construct_class(config: Dict[str, Union[str, dict]]) -> object:
     constructor = _get_class(config['type'])
     params = config.get('params', {})
 
-    try:
-        return constructor(**params)
-    except:
-        # if construction fails, just assume necessary parameters will be
-        # supplied later
-        return partial(constructor, **params)
+    return constructor(**params)
 
 
 def _instantiate_classes(config):
