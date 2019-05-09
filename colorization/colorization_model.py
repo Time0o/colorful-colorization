@@ -280,7 +280,7 @@ class ColorizationModel:
                 If `True`, load optimizer state as well.
 
         """
-        state = torch.load(path)
+        state = torch.load(path, map_location=(lambda storage, _: storage))
 
         self.network.load_state_dict(state['network'])
 

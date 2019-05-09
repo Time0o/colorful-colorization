@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import random
-from glob import glob
 from shutil import copyfile
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from torchvision import transforms
+from torchvision.transforms import Compose, ToTensor
 
+from colorization.colorization_model import ColorizationModel
 from colorization.data.image_directory import ImageDirectory
 from colorization.data.transforms import RGBOrGrayToL
 from colorization.modules.colorization_network import ColorizationNetwork
@@ -48,12 +49,7 @@ def _predict_color(args):
         args.input_dir,
         return_labels=False,
         return_filenames=True,
-        transform=transforms.Compose([
-            RGBOrGrayToL(),
-            transforms.ToPILImage(),
-            transforms.CenterCrop(224),
-            transforms.ToTensor()
-        ])
+        transform=Compose([RGBOrGrayToL(), ToTensor()])
     )
 
     dataloader = DataLoader(dataset, pin_memory=args.gpu)
@@ -61,14 +57,13 @@ def _predict_color(args):
     # create network
     device = 'cuda' if args.gpu else 'cpu'
 
-    network = ColorizationNetwork(annealed_mean_T=args.annealed_mean_T,
-                                  device=device)
-    network.to(device)
-    network.eval()
+    network = ColorizationNetwork(
+        annealed_mean_T=args.annealed_mean_T, device=device)
+
+    model = ColorizationModel(network, device=device)
 
     # load checkpoint
-    state = torch.load(args.model_checkpoint)
-    network.load_state_dict(state['network'])
+    model.load_checkpoint(args.model_checkpoint)
 
     # process images
     with torch.no_grad():
@@ -76,10 +71,8 @@ def _predict_color(args):
             if args.verbose:
                 print("processing '{}'".format(filename[0]))
 
-            l_torch = l_torch.to(device)
-
             l = torch_to_numpy(l_torch)
-            ab = resize(torch_to_numpy(network(l_torch)), l.shape[:2])
+            ab = resize(torch_to_numpy(model.predict(l_torch)), l.shape[:2])
 
             out_img = lab_to_rgb(np.dstack((l, ab)))
             out_path = os.path.join(args.output_dir, filename[0])
