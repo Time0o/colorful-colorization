@@ -3,7 +3,6 @@
 import argparse
 import os
 import sys
-
 import torch
 
 sys.path.insert(1, os.path.join(sys.path[0], ('..')))
@@ -15,8 +14,8 @@ from colorization.util.argparse import nice_help_formatter
 USAGE = \
 """run_training.py [-h|--help]
                        --config CONFIG
-                       [--init-proto PROTOTXT]
-                       [--init-model CAFFEMODEL]
+                       [--init-model-checkpoint CHECKPOINT]
+                       [--continue-training]
                        [--random-seed SEED]"""
 
 
@@ -29,13 +28,13 @@ if __name__ == '__main__':
                         required=True,
                         help="training configuration JSON file")
 
-    parser.add_argument('--init-proto',
-                        metavar='PROTOTXT',
-                        help="weight init Caffe prototxt file")
+    parser.add_argument('--init-model-checkpoint',
+                        metavar='CHECKPOINT',
+                        help="model checkpoint from which to initialize weights")
 
-    parser.add_argument('--init-model',
-                        metavar='CAFFEMODEL',
-                        help="weight init Caffe caffemodel file")
+    parser.add_argument('--continue-training',
+                        action='store_true',
+                        help="pick up training from given checkpoint")
 
     parser.add_argument('--random-seed',
                         metavar='SEED',
@@ -55,13 +54,18 @@ if __name__ == '__main__':
     dataloader = cfg['dataloader']
     model = cfg['model']
 
-    # initialize model
-    if (args.init_proto is None) != (args.init_model is None):
-        err = "--init-proto and --init-model must be specified together"
-        raise ValueError(err)
+    # initialize model and run training
 
-    if args.init_proto is not None:
-        model.network.init_from_caffe(args.init_proto, args.init_model)
+    if args.continue_training:
+        if args.init_model_checkpoint is None:
+            raise ValueError("no model checkpoint specified")
 
-    # run training
-    model.train(dataloader, **cfg['training_args'])
+        model.train(dataloader,
+                    checkpoint_init=args.init_model_checkpoint,
+                    **cfg['training_args'])
+    else:
+        if args.init_model_checkpoint is not None:
+            model.load_checkpoint(args.init_model_checkpoint,
+                                  load_optimizer=args.continue_training)
+
+        model.train(dataloader, **cfg['training_args'])

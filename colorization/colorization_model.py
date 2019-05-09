@@ -113,9 +113,9 @@ class ColorizationModel:
     def train(self,
               dataloader,
               iterations,
+              iterations_till_checkpoint=None,
               checkpoint_init=None,
-              checkpoint_dir=None,
-              epochs_till_checkpoint=None):
+              checkpoint_dir=None):
         """Train the models network.
 
         Args:
@@ -129,21 +129,21 @@ class ColorizationModel:
                 on, also note that while training time is specified in
                 iterations, checkpoint frequency is specified in epochs to
                 avoid issues with data loader shuffling etc.
+            iterations_till_checkpoint (str, optional):
+                Number of iterations between checkpoints, only meaningful in
+                combination with `checkpoint_dir`.
             checkpoint_init (str, optional):
                 Previous checkpoint from which to pick up training.
             checkpoint_dir (str, optional):
                 Directory in which to save checkpoints, must exist and be
                 empty, is this is set to `None`, no checkpoints will be saved.
-            epochs_till_checkpoint (str, optional):
-                Number of epochs between checkpoints, only meaningful in
-                combination with `checkpoint_dir`.
 
         """
 
         # restore from checkpoint
         if checkpoint_init is not None:
             self.load_checkpoint(checkpoint_init, load_optimizer=True)
-            epoch_init = self._checkpoint_epoch(checkpoint_init)
+            iteration_init = self._checkpoint_iteration(checkpoint_init)
 
         # validate checkpoint directory
         if checkpoint_dir is not None:
@@ -170,10 +170,8 @@ class ColorizationModel:
         # optimization loop
         if checkpoint_init is None:
             i = 1
-            ep = 1
         else:
-            i = len(dataloader) * (epoch_init - 1) + 1
-            ep = epoch_init
+            i = iteration_init
 
         done = False
         while not done:
@@ -196,20 +194,17 @@ class ColorizationModel:
                     self._log_queue.put(
                         _LossLogData(i, iterations, loss.item()))
 
+                # periodically save checkpoint
+                if checkpoint_dir is not None:
+                    if i % iterations_till_checkpoint == 0:
+                        self._checkpoint_training(checkpoint_dir, i)
+
                 # increment iteration counter
                 i += 1
 
                 if i > iterations:
                     done = True
                     break
-
-            # periodically save checkpoint
-            if not done:
-                if checkpoint_dir is not None:
-                    if ep % epochs_till_checkpoint == 0:
-                        self._checkpoint_training(checkpoint_dir, ep)
-
-                ep += 1
 
         # save final checkpoint
         if checkpoint_dir is not None:
@@ -328,8 +323,8 @@ class ColorizationModel:
 
         return checkpoint_path
 
-    def _checkpoint_training(self, checkpoint_dir, checkpoint_epoch):
-        path = self._checkpoint_path(checkpoint_dir, checkpoint_epoch)
+    def _checkpoint_training(self, checkpoint_dir, checkpoint_iterations):
+        path = self._checkpoint_path(checkpoint_dir, checkpoint_iterations)
 
         self.save_checkpoint(path, save_optimizer=True)
 
@@ -351,11 +346,11 @@ class ColorizationModel:
                 raise ValueError("checkpoint directory must be empty")
 
     @classmethod
-    def _checkpoint_path(cls, checkpoint_dir, checkpoint_epoch):
-        if checkpoint_epoch == 'final':
+    def _checkpoint_path(cls, checkpoint_dir, checkpoint_iteration):
+        if checkpoint_iteration == 'final':
             checkpoint_id = 'final'
         else:
-            checkpoint_id = cls.CHECKPOINT_ID_FMT.format(checkpoint_epoch)
+            checkpoint_id = cls.CHECKPOINT_ID_FMT.format(checkpoint_iteration)
 
         checkpoint = '{}_{}.{}'.format(cls.CHECKPOINT_PREFIX,
                                        checkpoint_id,
@@ -364,15 +359,18 @@ class ColorizationModel:
         return os.path.join(checkpoint_dir, checkpoint)
 
     @classmethod
-    def _checkpoint_epoch(cls, checkpoint_path):
+    def _checkpoint_iteration(cls, checkpoint_path):
         if checkpoint_path.find('final') != -1:
             return 'final'
 
         checkpoint_regex = '{}_(\\d+).{}'.format(cls.CHECKPOINT_PREFIX,
                                                  cls.CHECKPOINT_POSTFIX)
 
-        m = re.match(checkpoint_regex, checkpoint_path)
+        m = re.search(checkpoint_regex, checkpoint_path)
+        if m is None:
+            err = "invalid training checkpoint naming scheme"
+            raise ValueError(err)
 
-        checkpoint_epoch = int(m.group(1))
+        checkpoint_iteration = int(m.group(1))
 
-        return checkpoint_epoch
+        return checkpoint_iteration
