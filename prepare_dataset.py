@@ -130,12 +130,17 @@ def _split_dataset(data_dir,
             if not clean and resize_height is None:
                 move(f, subdir_path)
             else:
-                img = imread(f)
+                try:
+                    img = imread(f)
+                except:
+                    os.remove(f)
+                    continue
 
                 if clean:
                     # remove non-RGB images
                     if len(img.shape) != 3 or img.shape[2] not in [3, 4]:
                         os.remove(f)
+                        continue
 
                     # remove alpha channels
                     if img.shape[2] == 4:
@@ -288,6 +293,7 @@ if __name__ == '__main__':
                        args.file_ext,
                        args.val_split,
                        args.test_split,
+                       clean=args.clean,
                        shuffle=not args.no_shuffle,
                        reduce_size=args.reduce,
                        resize_height=args.resize_height,

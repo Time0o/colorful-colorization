@@ -11,6 +11,9 @@
                         "params": {
                             "transforms": [
                                 {
+                                   "type": "torchvision.transforms.ToPILImage"
+                                },
+                                {
                                     "type": "torchvision.transforms.RandomCrop",
                                     "params": {
                                         "size": 176
@@ -18,6 +21,15 @@
                                 },
                                 {
                                    "type": "torchvision.transforms.RandomHorizontalFlip"
+                                },
+                                {
+                                   "type": "colorization.data.transforms.ToNumpy"
+                                },
+                                {
+                                   "type": "colorization.data.transforms.RGBToLab"
+                                },
+                                {
+                                   "type": "torchvision.transforms.ToTensor"
                                 }
                             ]
                         }
@@ -37,7 +49,6 @@
             "network": {
                 "type": "colorization.modules.colorization_network.ColorizationNetwork",
                 "params": {
-                    "annealed_mean_T": 0.318,
                     "class_rebal_lambda": 0.5
                 }
             },

@@ -6,15 +6,15 @@ import warnings
 
 import numpy as np
 
-import colorization.config as config
+from colorization.colorization_model import ColorizationModel
+from colorization.data.transforms import PredictColor
+from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
-from colorization.util.image import \
-    imread, imsave, lab_to_rgb, numpy_to_torch, resize, rgb_to_lab, torch_to_numpy
+from colorization.util.image import imread, imsave
 
 
 USAGE = \
 """run_evaluation.py [-h|--help]
-                         --config CONFIG
                          [--input-image IMAGE]
                          [--input-dir IMAGE_DIR]
                          [--output-image IMAGE]
@@ -31,29 +31,8 @@ def _err(msg):
     raise ValueError(msg)
 
 
-def _predict_image(input_image, input_size, output_image):
-    # load input image
-    img_rgb = imread(input_image)
-    img_rgb_resized = resize(img_rgb, (input_size,) * 2)
-
-    h_orig, w_orig, _ = img_rgb.shape
-
-    # convert colorspace
-    img_lab = rgb_to_lab(img_rgb)
-    img_lab_resized = rgb_to_lab(img_rgb_resized)
-
-    # run prediction
-    l_batch = numpy_to_torch(img_lab_resized[:, :, :1])
-    ab_pred = torch_to_numpy(model.predict(l_batch))
-
-    # assemble and save
-    img_lab_pred = np.dstack(
-        (img_lab[:, :, :1], resize(ab_pred, (h_orig, w_orig))))
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-
-        imsave(output_image, lab_to_rgb(img_lab_pred))
+def _predict_image(model, input_image, output_image):
+    imsave(output_image, PredictColor(model)(imread(input_image)))
 
 
 if __name__ == '__main__':
@@ -63,10 +42,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(formatter_class=nice_help_formatter(),
                                      usage=USAGE)
-
-    parser.add_argument('--config',
-                        required=True,
-                        help="training configuration JSON file")
 
     parser.add_argument('--input-image',
                         metavar='IMAGE',
@@ -84,13 +59,6 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir',
                         metavar='IMAGE_DIR',
                         help="path to directory in which to write output images")
-
-    parser.add_argument('--input-size',
-                        metavar='SIZE',
-                        default=224,
-                        help=str("size (both height and width) to which image "
-                                 "is rescaled before putting to it through the "
-                                 "network (default is %(default)d)"))
 
     parser.add_argument('--pretrain-proto',
                         metavar='PROTOTXT',
@@ -111,6 +79,10 @@ if __name__ == '__main__':
                                  "and --model-checkpoint is not, the model "
                                  "corresponding to the most recent checkpoint "
                                  "is used to perform prediction"))
+
+    parser.add_argument('--gpu',
+                        action='store_true',
+                        help="run prediction on GPU")
 
     parser.add_argument('--verbose',
                         action='store_true',
@@ -142,10 +114,10 @@ if __name__ == '__main__':
         _err("either pretrained network OR checkpoint must be specified")
 
     # load configuration file(s)
-    cfg = config.get_config(args.config)
-    cfg = config.parse_config(cfg)
+    device = 'cuda' if args.gpu else 'cpu'
 
-    model = cfg['model']
+    network = ColorizationNetwork(device=device)
+    model = ColorizationModel(network, device=device)
 
     # load pretrained weights
     if pretrained:
@@ -162,7 +134,7 @@ if __name__ == '__main__':
 
     # predicted image(s)
     if args.input_image is not None:
-        _predict_image(args.input_image, args.input_size, args.output_image)
+        _predict_image(model, args.input_image, args.output_image)
     elif args.input_dir is not None:
         if not os.path.exists(args.output_dir):
             os.mkdir(args.output_dir)
@@ -174,4 +146,4 @@ if __name__ == '__main__':
             in_image = os.path.join(args.input_dir, image)
             out_image = os.path.join(args.output_dir, image)
 
-            _predict_image(in_image, args.input_size, out_image)
+            _predict_image(model, in_image, out_image)

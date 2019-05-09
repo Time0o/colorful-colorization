@@ -1,12 +1,10 @@
 import os
-import re
 from glob import glob
 
 import numpy as np
 from torch.utils.data.dataset import Dataset
-from torchvision.transforms import ToPILImage
 
-from ..util.image import imread, rgb_to_lab
+from ..util.image import imread
 
 
 class StandardDataset(Dataset):
@@ -16,38 +14,27 @@ class StandardDataset(Dataset):
 
     DTYPE = np.float32
 
-    CLEAN_ASSUME = 'assume'
-    CLEAN_SKIP = 'skip'
-    CLEAN_PURGE = 'purge'
-
     def __init__(self,
                  root,
                  dataset=DATASET_TRAIN,
-                 limit=None,
-                 clean=CLEAN_ASSUME,
-                 crop_size=None,
                  transform=None):
 
         self.root = root
         self.dataset = dataset
-        self.limit = limit
         self.transform = transform
 
         self._build_indices()
-        self._clean(clean)
 
     def __getitem__(self, index):
-        path = self._indices[self.dataset][index]
+        img = imread(self._indices[self.dataset][index])
 
-        return self._load_and_process_image(path)
+        if self.transform:
+            img = self.transform(img)
+
+        return img
 
     def __len__(self):
-        l = len(self._indices[self.dataset])
-
-        if self.limit is None:
-            return l
-        else:
-            return min(self.limit, l)
+        return len(self._indices[self.dataset])
 
     @property
     def root(self):
@@ -58,6 +45,13 @@ class StandardDataset(Dataset):
         if not os.path.isdir(root):
             fmt = "not a directory: '{}'"
             raise ValueError(fmt.format(root))
+
+        subdirs = [self.DATASET_TRAIN, self.DATASET_VAL, self.DATASET_TEST]
+
+        for subdir in subdirs:
+            if not os.path.exists(os.path.join(root, subdir)):
+                fmt = "missing '{}' subdirectory"
+                raise ValueError(fmt.format(subdir))
 
         self._root = root
 
@@ -85,35 +79,3 @@ class StandardDataset(Dataset):
 
             for image_path in glob(os.path.join(dataset_path, '*')):
                 self._indices[dataset].append(image_path)
-
-    def _clean(self, clean):
-        if clean == self.CLEAN_SKIP:
-            self._filter_non_rgb()
-        elif clean == self.CLEAN_PURGE:
-            self._filter_non_rgb(purge=True)
-        elif clean != self.CLEAN_ASSUME:
-            raise ValueError("invalid cleaning procedure")
-
-    def _filter_non_rgb(self, purge=False):
-        for dataset, index in self._indices.items():
-            index_rgb_only = []
-
-            for i, path in enumerate(index):
-                if self._is_rgb(imread(path)):
-                    index_rgb_only.append(path)
-                elif purge:
-                    os.remove(path)
-
-            self._indices[dataset] = index_rgb_only
-
-    def _load_and_process_image(self, path):
-        img_rgb = imread(path)
-
-        if self.transform:
-            img_pil = ToPILImage()(img_rgb)
-            img_pil = self.transform(img_pil)
-            img_rgb = np.array(img_pil)
-
-        img_lab = rgb_to_lab(img_rgb)
-
-        return np.moveaxis(img_lab.astype(self.DTYPE), -1, 0)

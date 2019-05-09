@@ -24,8 +24,14 @@ _CAFFE_LAYER_NAME_MAPPING = {
 class ColorizationNetwork(nn.Module):
     DEFAULT_KERNEL_SIZE = 3
 
-    def __init__(self, annealed_mean_T=0, class_rebal_lambda=None):
+    def __init__(self,
+                 annealed_mean_T=0.38,
+                 class_rebal_lambda=None,
+                 device='cuda'):
+
         super().__init__()
+
+        self.device = device
 
         # prediction
         self.conv1 = self._create_block('conv1', (2, 1, 64), strides=[1, 2])
@@ -66,20 +72,25 @@ class ColorizationNetwork(nn.Module):
         ]
 
         # en-/decoding
-        self.encode_ab = SoftEncodeAB(DEFAULT_CIELAB)
-        self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB, T=annealed_mean_T)
+        self.encode_ab = SoftEncodeAB(DEFAULT_CIELAB,
+                                      device=self.device)
+
+        self.decode_q = AnnealedMeanDecodeQ(DEFAULT_CIELAB,
+                                            T=annealed_mean_T,
+                                            device=self.device)
 
         # rebalancing
         self.class_rebal_lambda = class_rebal_lambda
 
         if class_rebal_lambda is not None:
-            self.get_class_weights = GetClassWeights(
-                DEFAULT_CIELAB, lambda_=class_rebal_lambda)
+            self.get_class_weights = GetClassWeights(DEFAULT_CIELAB,
+                                                     lambda_=class_rebal_lambda,
+                                                     device=self.device)
 
             self.rebalance_loss = RebalanceLoss.apply
 
         # move to device
-        self.cuda()
+        self.to(self.device)
 
     def init_from_caffe(self, proto, model):
         # read in caffe network

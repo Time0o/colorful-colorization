@@ -2,7 +2,7 @@
 **/.ipynb_checkpoints
 
 data/*
-!data/.gitkeep
+!data/get_ctest.sh
 
 figures/*
 !figures/.gitkeep
