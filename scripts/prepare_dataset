@@ -8,6 +8,8 @@ from glob import glob
 from shutil import move
 from subprocess import CalledProcessError, check_call
 
+sys.path.insert(1, os.path.join(sys.path[0], ('..')))
+
 from colorization.util.argparse import nice_help_formatter
 from colorization.util.image import imread, imsave, resize
 

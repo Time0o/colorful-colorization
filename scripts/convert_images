@@ -3,12 +3,15 @@
 import argparse
 import os
 import random
+import sys
 from shutil import copyfile
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
+
+sys.path.insert(1, os.path.join(sys.path[0], ('..')))
 
 from colorization.colorization_model import ColorizationModel
 from colorization.data.image_directory import ImageDirectory

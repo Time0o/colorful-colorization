@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
+import sys
 
 import torch
+
+sys.path.insert(1, os.path.join(sys.path[0], ('..')))
 
 import colorization.config as config
 from colorization.util.argparse import nice_help_formatter

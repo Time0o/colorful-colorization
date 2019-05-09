@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.models import vgg16
 
+sys.path.insert(1, os.path.join(sys.path[0], ('..')))
+
 from colorization.data.image_directory import ImageDirectory
 from colorization.util.argparse import nice_help_formatter
 
