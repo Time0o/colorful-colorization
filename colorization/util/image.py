@@ -108,3 +108,15 @@ def imsave(path, img):
         warnings.simplefilter('ignore')
 
         io.imsave(path, img.astype(np.uint8))
+
+
+def predict_color(model, img):
+    if is_rgb(img):
+        l = rgb_to_lab(img)[:, :, :1]
+    else:
+        l = img.reshape(*img.shape[:2], 1)
+
+    l_torch = numpy_to_torch(l)
+    ab = resize(torch_to_numpy(model.predict(l_torch)), l.shape[:2])
+
+    return lab_to_rgb(np.dstack((l, ab)))
