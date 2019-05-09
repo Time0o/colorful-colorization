@@ -60,7 +60,7 @@ def _predict_color(args):
     network = ColorizationNetwork(
         annealed_mean_T=args.annealed_mean_T, device=device)
 
-    model = ColorizationModel(network, device=device)
+    model = ColorizationModel(network)
 
     # load checkpoint
     model.load_checkpoint(args.model_checkpoint)

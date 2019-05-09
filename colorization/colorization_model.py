@@ -58,7 +58,6 @@ class ColorizationModel:
                  network,
                  loss=None,
                  optimizer=None,
-                 device='cuda',
                  log_config=None,
                  logger=None):
         """
@@ -82,9 +81,6 @@ class ColorizationModel:
                 Partially applied training optimizer, parameter argument is
                 supplied by this constructor, if this is set to `None`, the
                 model is not trainable.
-            device (str):
-                Device on which training and prediction is to be run, must be
-                either 'cpu' (default) or 'cuda'.
             log_config (dict, optional):
                 Python `logging` configuration dictionary, if this is set to
                 `None`, logging will be disabled.
@@ -105,7 +101,7 @@ class ColorizationModel:
         else:
             self.optimizer = optimizer(network.parameters())
 
-        self.device = device
+        self.device = network.device
 
         self._log_enabled = \
             _mp_spawn and log_config is not None and logger is not None
