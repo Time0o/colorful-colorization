@@ -20,7 +20,7 @@ USAGE = \
                           [--gpu]
                           [--verbose]"""
 
-RESULTFILE = "classified.txt"
+RESULTFILE = "classifications.txt"
 
 
 if __name__ == '__main__':
