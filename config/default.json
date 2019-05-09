@@ -3,9 +3,10 @@
         "type": "torch.utils.data.DataLoader",
         "params": {
             "dataset": {
-                "type": "colorization.data.standard_dataset.StandardDataset",
+                "type": "colorization.data.image_directory.ImageDirectory",
                 "params": {
-                    "root": ["path", "../data/stanford_dogs"],
+                    "root": ["path", "../data/stanford_dogs/train"],
+                    "return_labels": false,
                     "transform": {
                         "type": "torchvision.transforms.Compose",
                         "params": {
