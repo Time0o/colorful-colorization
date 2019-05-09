@@ -32,9 +32,7 @@ imagenet_val_labels="$2"
 mkdir -p "$CVAL48K_DIR" "$CVAL10K_DIR" "$CVAL1K_DIR"
 
 # get image lists
-paste -d " " <(find "$imagenet_val_root" -type f | sort | head -n 48000) \
-             <(cat "$imagenet_val_labels" | head -n 48000) \
-             > "$CVAL48K_DIR/$LABELFILE"
+cat "$imagenet_val_labels" | head -n 48000 > "$CVAL48K_DIR/$LABELFILE"
 
 get_file \
 "https://raw.githubusercontent.com/AruniRC/colorizer-fcn/master/lists/ctest10k.txt" \
