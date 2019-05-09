@@ -181,11 +181,7 @@ if __name__ == '__main__':
             in_path = os.path.join(args.input_dir, filename)
             out_path = os.path.join(args.output_dir, filename)
 
-            img = imread(in_path)
-            if len(img.shape) == 2 or img.shape[2] == 1:
-                img = np.dstack((img,) * 3)
-
-            imsave(out_path, transform(imread(in_path)))
+            imsave(out_path, transform(to_rgb(imread(in_path))))
 
     # copy labels
     label_file = os.path.join(args.input_dir, ImageDirectory.LABEL_FILENAME)

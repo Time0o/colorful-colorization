@@ -43,6 +43,13 @@ def is_rgb(img):
     return len(img.shape) == 3 and img.shape[2] == 3
 
 
+def to_rgb(img):
+    if is_rgb(img):
+        return img
+    else:
+        return np.dstack((img,) * 3)
+
+
 def rgb_to_lab(img):
     assert img.dtype == np.uint8
 

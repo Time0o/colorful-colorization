@@ -3,7 +3,7 @@ import os
 import torch
 from torch.utils.data.dataset import Dataset
 
-from ..util.image import images_in_directory, imread
+from ..util.image import images_in_directory, imread, to_rgb
 
 
 class ImageDirectory(Dataset):
@@ -27,7 +27,7 @@ class ImageDirectory(Dataset):
     def __getitem__(self, index):
         filename = self._files[index]
 
-        img = imread(os.path.join(self.root, filename))
+        img = to_rgb(imread(os.path.join(self.root, filename)))
 
         if self.transform:
             img = self.transform(img)
