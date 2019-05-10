@@ -234,7 +234,7 @@ class _TFConverter:
         all_tensors = set()
 
         for tensor in self.tf_reader.get_variable_to_shape_map():
-            if not self._is_optim_tensor(tensor):
+            if not self._ignore_tensor(tensor):
                 all_tensors.add(tensor)
 
         if self._processed_tensors != all_tensors:
@@ -290,8 +290,15 @@ class _TFConverter:
         return torch.Tensor(tf_tensor)
 
     @staticmethod
-    def _is_optim_tensor(tensor):
-        return tensor == 'global_step' or tensor.endswith('Momentum')
+    def _ignore_tensor(tensor):
+        specific = ['global_step']
+        postfixes = ['Momentum', 'ExponentialMovingAverage']
+
+        if any([tensor == t for t in specific]):
+            return True
+
+        if any([tensor.endswith(p) for p in postfixes]):
+            return True
 
 
 class DeepLabV3Plus(nn.Module):
@@ -323,16 +330,18 @@ class DeepLabV3Plus(nn.Module):
             ('conv', nn.Conv2d(self.DECODER_OUT_CHANNELS, out_channels, 1))
         ]))
 
-    def init_from_tensorflow(self, checkpoint):
+    def init_from_tensorflow(self, checkpoint, xception_only=False):
         if not _TF_LOADED:
             raise ValueError("tensorflow not loaded")
 
         tfc = _TFConverter(checkpoint)
 
         self._init_xception(tfc)
-        self._init_aspp(tfc)
-        self._init_decoder(tfc)
-        self._init_logits(tfc)
+
+        if not xception_only:
+            self._init_aspp(tfc)
+            self._init_decoder(tfc)
+            self._init_logits(tfc)
 
         tfc.warn_if_incomplete()
 
