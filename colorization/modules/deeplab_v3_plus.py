@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from functools import partial
+from warnings import warn
 
 try:
     import tensorflow as tf
@@ -224,8 +225,23 @@ class _TFConverter:
         self.tf_reader = tf.train.NewCheckpointReader(checkpoint)
         self.prefix = None
 
+        self._processed_tensors = set()
+
     def set_prefix(self, prefix):
         self.prefix = prefix
+
+    def warn_if_incomplete(self):
+        all_tensors = set()
+
+        for tensor in self.tf_reader.get_variable_to_shape_map():
+            if not self._is_optim_tensor(tensor):
+                all_tensors.add(tensor)
+
+        if self._processed_tensors != all_tensors:
+            not_processed = sorted(all_tensors - self._processed_tensors)
+
+            fmt = "the following tensors were not processed:\n{}"
+            warn(fmt.format('\n'.join(not_processed)))
 
     def conv(self, pt_layer, tf_layer, separable=False, bias=False):
         if separable:
@@ -266,10 +282,16 @@ class _TFConverter:
 
         tf_tensor = self.tf_reader.get_tensor(tf_path)
 
+        self._processed_tensors.add(tf_path)
+
         if transpose is not None:
             tf_tensor = tf_tensor.transpose(transpose)
 
         return torch.Tensor(tf_tensor)
+
+    @staticmethod
+    def _is_optim_tensor(tensor):
+        return tensor == 'global_step' or tensor.endswith('Momentum')
 
 
 class DeepLabV3Plus(nn.Module):
@@ -311,6 +333,8 @@ class DeepLabV3Plus(nn.Module):
         self._init_aspp(tfc)
         self._init_decoder(tfc)
         self._init_logits(tfc)
+
+        tfc.warn_if_incomplete()
 
     def forward(self, x):
         ll, x = self.encoder(x)
