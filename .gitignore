@@ -10,8 +10,8 @@ figures/*
 log/*
 !log/.gitkeep
 
-models/*/*
-!models/*/.gitkeep
+models/*
+!models/.gitkeep
 
 resources/*
 !resources/get_resources.sh
