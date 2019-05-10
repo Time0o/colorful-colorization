@@ -165,5 +165,12 @@ def get_config(path: str, default_path=None) -> Dict[str, dict]:
     return config
 
 
+def modify_config(cfg: dict, path: str, val):
+    keys = path.split('/')
+
+    parent = _get_nested_dictionary(cfg, keys[:-1])
+    parent[keys[-1]] = val
+
+
 def parse_config(config: dict) -> dict:
     return _instantiate_classes(config)

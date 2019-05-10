@@ -181,6 +181,9 @@ class ColorizationModel:
         else:
             i = iteration_init
 
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.max_epochs = iterations
+
         done = False
         while not done:
             for img in dataloader:

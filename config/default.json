@@ -5,7 +5,6 @@
             "dataset": {
                 "type": "colorization.data.image_directory.ImageDirectory",
                 "params": {
-                    "root": ["path", "../data/stanford_dogs/train"],
                     "return_labels": false,
                     "transform": {
                         "type": "torchvision.transforms.Compose",
@@ -56,17 +55,6 @@
             "loss": {
                 "type": "colorization.modules.cross_entropy_loss_2d.CrossEntropyLoss2d"
             },
-            "optimizer": {
-                "type": "colorization.util.training.OptimWrapper",
-                "params": {
-                    "optim_type": "torch.optim.Adam",
-                    "optim_params": {
-                        "lr": 3.16e-5,
-                        "betas": [0.9, 0.99],
-                        "weight_decay": 1e-3
-                    }
-                }
-            },
             "log_config": {
                 "version": 1,
                 "disable_existing_loggers": false,
@@ -89,7 +77,6 @@
                         "level": "INFO",
                         "formatter": "timestamp",
                         "class": "logging.FileHandler",
-                        "filename": ["path", "../log/default.txt"],
                         "mode": "w"
                     }
                  },
@@ -102,10 +89,5 @@
             },
             "logger": "training_logger"
         }
-    },
-    "training_args": {
-        "iterations": 5000,
-        "iterations_till_checkpoint": 1000,
-        "checkpoint_dir": ["path", "../models/default"]
     }
 }

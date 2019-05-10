@@ -1,0 +1,24 @@
+{
+    "model": {
+        "params": {
+            "optimizer": {
+                "type": "colorization.util.training.OptimWrapper",
+                "params": {
+                    "optim_type": "torch.optim.SGD",
+                    "optim_params": {
+                        "lr": 0.07
+                    }
+                }
+            },
+            "lr_scheduler": {
+                "type": "colorization.util.training.LRSchedulerWrapper",
+                "params": {
+                    "sched_type": "colorization.util.training.PolyLR",
+                    "sched_params": {
+                        "power": 0.9
+                    }
+                }
+            }
+        }
+    }
+}

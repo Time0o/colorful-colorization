@@ -7,13 +7,16 @@ from .resources import get_class
 
 
 class PolyLR(_LRScheduler):
-    def __init__(self, optimizer, max_epochs, power, last_epoch=-1):
-        self.max_epochs = max_epochs
+    def __init__(self, optimizer, power, last_epoch=-1):
+        self.max_epochs = None
         self.power = power
 
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
+        if self.max_epochs is None:
+            return [g['lr'] for g in self.optimizer.param_groups]
+
         return [
             g['lr'] * (1 - self.last_epoch / self.max_epochs)**self.power
             for g in self.optimizer.param_groups
