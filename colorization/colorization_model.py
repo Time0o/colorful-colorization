@@ -253,7 +253,7 @@ class ColorizationModel:
 
         """
         state = {
-            'network': self.network.state_dict(),
+            'network': self.network.base_network.state_dict(),
         }
 
         if save_optimizer:
@@ -273,7 +273,7 @@ class ColorizationModel:
         """
         state = torch.load(path, map_location=(lambda storage, _: storage))
 
-        self.network.load_state_dict(state['network'])
+        self.network.base_network.load_state_dict(state['network'])
 
         if load_optimizer:
             self.optimizer.load_state_dict(state['optimizer'])
