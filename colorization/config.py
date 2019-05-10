@@ -2,8 +2,9 @@ import json
 import os
 from collections import Mapping
 from functools import partial
-from importlib import import_module
 from typing import Dict, Generator, Tuple, Union
+
+from .util.resources import get_class
 
 
 # recursive dictionary operations
@@ -115,21 +116,12 @@ def _merge_configs(config: Dict[str, dict],
 
 # string to object conversion operations
 
-def _get_class(name: str) -> object:
-    # Obtain a class object from its string representation, e.g. if `name` is
-    # `'torch.optim.Adam'`, `torch.optim.Adam` will be returned.
-
-    module, classname = name.rsplit('.', 1)
-
-    return getattr(import_module(module), classname)
-
-
 def _construct_class(config: Dict[str, Union[str, dict]]) -> object:
     # Construct an object based on a configuration dictionary which contains
     # the objects type (in string representation) under the key `'type'` and
     # constructor keyword parameters under the key `'params'`.
 
-    constructor = _get_class(config['type'])
+    constructor = get_class(config['type'])
     params = config.get('params', {})
 
     return constructor(**params)
