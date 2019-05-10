@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from ..cielab import ABGamut, CIELAB, DEFAULT_CIELAB
 from .annealed_mean_decode_q import AnnealedMeanDecodeQ
+from .deeplab_v3_plus import DeepLabV3Plus
 from .get_class_weights import GetClassWeights
 from .rebalance_loss import RebalanceLoss
 from .soft_encode_ab import SoftEncodeAB
@@ -21,6 +22,8 @@ class ColorizationNetwork(nn.Module):
 
         if base_network == 'vgg':
             self.base_network = VGGSegmentationNetwork(ABGamut.EXPECTED_SIZE)
+        elif base_network == 'deeplab':
+            self.base_network = DeepLabV3Plus(ABGamut.EXPECTED_SIZE)
         else:
             fmt = "invalid base network type '{}'"
             raise ValueError(fmt.format(base_network))
