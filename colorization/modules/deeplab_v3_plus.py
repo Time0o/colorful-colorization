@@ -2,12 +2,6 @@ from collections import OrderedDict
 from functools import partial
 from warnings import warn
 
-try:
-    import tensorflow as tf
-    _TF_LOADED = True
-except ImportError:
-    _TF_LOADED = False
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -331,8 +325,7 @@ class DeepLabV3Plus(nn.Module):
         ]))
 
     def init_from_tensorflow(self, checkpoint, xception_only=False):
-        if not _TF_LOADED:
-            raise ValueError("tensorflow not loaded")
+        import tensorflow as tf
 
         tfc = _TFConverter(checkpoint)
 

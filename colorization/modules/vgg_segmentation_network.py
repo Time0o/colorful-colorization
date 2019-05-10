@@ -2,12 +2,6 @@ import os; os.environ['GLOG_minloglevel'] = '2'
 from collections import OrderedDict
 from functools import partial
 
-try:
-    import caffe
-    _CAFFE_LOADED = True
-except ImportError:
-    _CAFFE_LOADED = False
-
 import torch
 import torch.nn as nn
 
@@ -65,8 +59,7 @@ class VGGSegmentationNetwork(nn.Module):
         ]
 
     def init_from_caffe(self, proto, model):
-        if not _CAFFE_LOADED:
-            raise ValueError("caffe not loaded")
+        import caffe
 
         # read in caffe network
         caffe_network = caffe.Net(proto, model, caffe.TEST)
