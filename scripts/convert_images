@@ -26,6 +26,7 @@ USAGE = \
                          --input-dir INPUT_DIR
                          --output-dir OUTPUT_DIR
                          [--color-source-dir COLOR_SOURCE_DIR]
+                         [--base-network NETWORK_ID]
                          [--annealed-mean-T ANNEALED_MEAN_T]
                          [--model-checkpoint MODEL_CHECKPOINT]
                          [--gpu]
@@ -61,7 +62,9 @@ def _predict_color(args):
     device = 'cuda' if args.gpu else 'cpu'
 
     network = ColorizationNetwork(
-        annealed_mean_T=args.annealed_mean_T, device=device)
+        base_network=args.base_network,
+        annealed_mean_T=args.annealed_mean_T,
+        device=device)
 
     model = ColorizationModel(network)
 
@@ -114,6 +117,13 @@ if __name__ == '__main__':
                                  "'random_color', random colors are extracted "
                                  "from randomly chosen images in this "
                                  "directory "))
+
+    parser.add_argument('--base-network',
+                        choices=['vgg', 'deeplab'],
+                        default='vgg',
+                        help=str("only meaningful in conjuction with "
+                                 "'predict_color', network architecture "
+                                 "id of prediction model (default: %(default)s)"))
 
     parser.add_argument('--annealed-mean-T',
                         type=float,
