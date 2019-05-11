@@ -36,10 +36,10 @@ class Conv2dSeparable(nn.Module):
             ('bn', nn.BatchNorm2d(out_channels))
         ]))
 
-        self.relu1 = nn.ReLU(inplace=True)
+        self.relu1 = nn.ReLU()
 
         if not relu_first:
-            self.relu2 = nn.ReLU(inplace=True)
+            self.relu2 = nn.ReLU()
 
     def forward(self, x):
         if self.relu_first:

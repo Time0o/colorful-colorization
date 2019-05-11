@@ -13,7 +13,7 @@ def _conv1x1(in_channels, out_channels):
     return nn.Sequential(OrderedDict([
         ('conv', nn.Conv2d(in_channels, out_channels, 1, bias=False)),
         ('bn', nn.BatchNorm2d(out_channels)),
-        ('relu', nn.ReLU(inplace=True))
+        ('relu', nn.ReLU())
     ]))
 
 
@@ -44,7 +44,7 @@ class _XceptionBlock(nn.Module):
             ]))
 
         conv_separable = partial(Conv2dSeparable,
-                                 kernel_size=1,
+                                 kernel_size=3,
                                  dilation=dilation,
                                  relu_first=relu_first)
 
@@ -78,14 +78,15 @@ class _Xception(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(OrderedDict([
-            ('conv', nn.Conv2d(3, 32, 3, stride=2, padding=1, bias=False)),
+            ('conv', nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False)),
             ('bn', nn.BatchNorm2d(32)),
-            ('relu', nn.ReLU(inplace=True))
+            ('relu', nn.ReLU())
         ]))
 
         self.conv2 = nn.Sequential(OrderedDict([
             ('conv', nn.Conv2d(32, 64, 3, stride=1, padding=1, bias=False)),
-            ('bn', nn.BatchNorm2d(64))
+            ('bn', nn.BatchNorm2d(64)),
+            ('relu', nn.ReLU())
         ]))
 
         self.entry_block1 = _XceptionBlock([64, 128, 128, 128],
@@ -113,7 +114,7 @@ class _Xception(nn.Module):
         self.exit_block2 = _XceptionBlock([1024, 1536, 1536, 2048],
                                           dilation=self.EXIT_DILATIONS[1],
                                           skip_type='none',
-                                          relu_first=True)
+                                          relu_first=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -148,7 +149,7 @@ class _AtrousSpatialPyramidPooling(nn.Module):
         def conv_separable(dilation):
             return Conv2dSeparable(in_channels=in_channels,
                                    out_channels=out_channels,
-                                   kernel_size=1,
+                                   kernel_size=3,
                                    dilation=dilation)
 
         self.conv_parallel2 = conv_separable(self.DILATIONS[0])
@@ -159,7 +160,7 @@ class _AtrousSpatialPyramidPooling(nn.Module):
         self.conv = nn.Sequential(OrderedDict([
             ('conv', nn.Conv2d(5 * out_channels, out_channels, 1, bias=False)),
             ('bn', nn.BatchNorm2d(out_channels)),
-            ('relu', nn.ReLU(inplace=True)),
+            ('relu', nn.ReLU()),
             ('dropout', nn.Dropout2d(p=self.DROPOUT_PROB))
         ]))
 
@@ -195,12 +196,12 @@ class _Decoder(nn.Module):
         self.conv1 = Conv2dSeparable(
             in_channels=(enc_in_channels + ll_reduced_channels),
             out_channels=enc_in_channels,
-            kernel_size=1)
+            kernel_size=3)
 
         self.conv2 = Conv2dSeparable(
             in_channels=enc_in_channels,
             out_channels=enc_out_channels,
-            kernel_size=1)
+            kernel_size=3)
 
     def forward(self, ll, enc):
         enc = _interpolate(enc, ll.shape[2:])
@@ -215,7 +216,7 @@ class _Decoder(nn.Module):
 
 
 class _TFConverter:
-    def __init__(self, checkpoint):
+    def __init__(self, tf, checkpoint):
         self.tf_reader = tf.train.NewCheckpointReader(checkpoint)
         self.prefix = None
 
@@ -224,11 +225,11 @@ class _TFConverter:
     def set_prefix(self, prefix):
         self.prefix = prefix
 
-    def warn_if_incomplete(self):
+    def warn_if_incomplete(self, ignore_logits=False):
         all_tensors = set()
 
         for tensor in self.tf_reader.get_variable_to_shape_map():
-            if not self._ignore_tensor(tensor):
+            if not self._ignore_tensor(tensor, ignore_logits=ignore_logits):
                 all_tensors.add(tensor)
 
         if self._processed_tensors != all_tensors:
@@ -244,22 +245,33 @@ class _TFConverter:
         else:
             if tf_layer.endswith('_depthwise'):
                 pt_layer.conv.weight.data = self._get(
-                    tf_layer, 'depthwise_weights', transpose=(2, 3, 0, 1))
+                    pt_layer.conv.weight.data,
+                    tf_layer,
+                    'depthwise_weights',
+                    transpose=(2, 3, 0, 1))
             else:
                 pt_layer.conv.weight.data = self._get(
-                    tf_layer, 'weights', transpose=(3, 2, 0, 1))
+                    pt_layer.conv.weight.data,
+                    tf_layer,
+                    'weights',
+                    transpose=(3, 2, 0, 1))
 
             if bias:
-                pt_layer.conv.bias.data = self._get(tf_layer, 'biases')
+                pt_layer.conv.bias.data = self._get(
+                    pt_layer.conv.bias.data, tf_layer, 'biases')
 
             if hasattr(pt_layer, 'bn'):
                 self.batchnorm(pt_layer.bn, tf_layer + '/BatchNorm')
 
     def batchnorm(self, pt_layer, tf_layer):
-        pt_layer.bias.data = self._get(tf_layer, 'beta')
-        pt_layer.weight.data = self._get(tf_layer, 'gamma')
-        pt_layer.running_mean.data = self._get(tf_layer, 'moving_mean')
-        pt_layer.running_var.data = self._get(tf_layer, 'moving_variance')
+        pt_layer.bias.data = self._get(
+            pt_layer.bias.data, tf_layer, 'beta')
+        pt_layer.weight.data = self._get(
+            pt_layer.weight.data, tf_layer, 'gamma')
+        pt_layer.running_mean.data = self._get(
+            pt_layer.running_mean.data, tf_layer, 'moving_mean')
+        pt_layer.running_var.data = self._get(
+            pt_layer.running_var.data, tf_layer, 'moving_variance')
 
     def xception_block(self, pt_block, tf_block):
         if pt_block.skip_type == 'conv':
@@ -269,26 +281,36 @@ class _TFConverter:
         self.conv(pt_block.conv2, tf_block + '/separable_conv2', separable=True)
         self.conv(pt_block.conv3, tf_block + '/separable_conv3', separable=True)
 
-    def _get(self, tf_layer, tf_tensor, transpose=None):
+    def _get(self, pt_tensor, tf_layer, tf_tensor, transpose=None):
+        # load tensor
         tf_path = "{}/{}".format(tf_layer, tf_tensor)
         if self.prefix is not None:
             tf_path = self.prefix + tf_path
 
         tf_tensor = self.tf_reader.get_tensor(tf_path)
 
-        self._processed_tensors.add(tf_path)
-
+        # transpose tensor if necessary
         if transpose is not None:
             tf_tensor = tf_tensor.transpose(transpose)
+
+        # assert that tensor shapes match
+        if tuple(pt_tensor.shape) != tf_tensor.shape:
+            raise ValueError("tensor shape mismatch for '{}'".format(tf_path))
+
+        # mark tensor as processed
+        self._processed_tensors.add(tf_path)
 
         return torch.Tensor(tf_tensor)
 
     @staticmethod
-    def _ignore_tensor(tensor):
-        specific = ['global_step']
+    def _ignore_tensor(tensor, ignore_logits=False):
+        keywords = ['conv1_1', 'global_step']
         postfixes = ['Momentum', 'ExponentialMovingAverage']
 
-        if any([tensor == t for t in specific]):
+        if ignore_logits and 'logits' in tensor:
+            return True
+
+        if any([(k in tensor) for k in keywords]):
             return True
 
         if any([tensor.endswith(p) for p in postfixes]):
@@ -324,19 +346,25 @@ class DeepLabV3Plus(nn.Module):
             ('conv', nn.Conv2d(self.DECODER_OUT_CHANNELS, out_channels, 1))
         ]))
 
-    def init_from_tensorflow(self, checkpoint, xception_only=False):
+    def init_from_tensorflow(self,
+                             checkpoint,
+                             xception_only=False,
+                             init_logits=False):
+
         import tensorflow as tf
 
-        tfc = _TFConverter(checkpoint)
+        tfc = _TFConverter(tf, checkpoint)
 
         self._init_xception(tfc)
 
         if not xception_only:
             self._init_aspp(tfc)
             self._init_decoder(tfc)
-            self._init_logits(tfc)
 
-        tfc.warn_if_incomplete()
+            if init_logits:
+                self._init_logits(tfc)
+
+        tfc.warn_if_incomplete(ignore_logits=(not init_logits))
 
     def forward(self, x):
         ll, x = self.encoder(x)
@@ -351,7 +379,6 @@ class DeepLabV3Plus(nn.Module):
         # entry
         tfc.set_prefix('xception_65/entry_flow/')
 
-        tfc.conv(self.encoder.conv1, 'conv1_1')
         tfc.conv(self.encoder.conv2, 'conv1_2')
         tfc.xception_block(self.encoder.entry_block1, 'block1/unit_1/xception_module')
         tfc.xception_block(self.encoder.entry_block2, 'block2/unit_1/xception_module')
