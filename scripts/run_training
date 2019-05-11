@@ -14,11 +14,11 @@ from colorization.util.argparse import nice_help_formatter
 USAGE = \
 """run_training.py [-h|--help]
                        --config CONFIG
-                       [--data-dir DATA_DIR]
-                       [--checkpoint-dir MODEL_DIR]
-                       [--log-file LOG_FILE]
-                       [--iterations N]
-                       [--iterations-till-checkpoint N]
+                       --data-dir DATA_DIR
+                       --checkpoint-dir CHECKPOINT_DIR
+                       --log-file LOG_FILE
+                       --iterations N
+                       --iterations-till-checkpoint N
                        [--default-config CONFIG]
                        [--init-model-checkpoint CHECKPOINT]
                        [--continue-training]
