@@ -1,12 +1,25 @@
 {
+    "dataloader": {
+        "type": "torch.utils.data.DataLoader",
+        "params": {
+            "batch_size": 16
+        }
+    },
     "model": {
         "params": {
+            "network": {
+                "type": "colorization.modules.colorization_network.ColorizationNetwork",
+                "params": {
+                    "base_network": "deeplab"
+                }
+            },
             "optimizer": {
                 "type": "colorization.util.training.OptimWrapper",
                 "params": {
                     "optim_type": "torch.optim.SGD",
                     "optim_params": {
-                        "lr": 0.07
+                        "lr": 0.0001,
+                        "momentum": 0.00004
                     }
                 }
             },

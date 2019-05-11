@@ -1,6 +1,12 @@
 {
     "model": {
         "params": {
+            "network": {
+                "type": "colorization.modules.colorization_network.ColorizationNetwork",
+                "params": {
+                    "base_network": "vgg"
+                }
+            },
             "optimizer": {
                 "type": "colorization.util.training.OptimWrapper",
                 "params": {
