@@ -87,6 +87,12 @@ def torch_to_numpy(batch):
     return batch[0, :, :, :].cpu().numpy().transpose(1, 2, 0)
 
 
+def normalize(img, to):
+    zero_to_one = (img + img.min()) / (img.max() - img.min())
+
+    return zero_to_one * (to[1] - to[0]) + to[0]
+
+
 def resize(img, size):
     res = transform.resize(img, size, mode='reflect', anti_aliasing=True)
 

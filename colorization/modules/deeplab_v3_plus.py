@@ -78,7 +78,7 @@ class _Xception(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(OrderedDict([
-            ('conv', nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False)),
+            ('conv', nn.Conv2d(3, 32, 3, stride=2, padding=1, bias=False)),
             ('bn', nn.BatchNorm2d(32)),
             ('relu', nn.ReLU())
         ]))
@@ -304,7 +304,7 @@ class _TFConverter:
 
     @staticmethod
     def _ignore_tensor(tensor, ignore_logits=False):
-        keywords = ['conv1_1', 'global_step']
+        keywords = ['global_step']
         postfixes = ['Momentum', 'ExponentialMovingAverage']
 
         if ignore_logits and 'logits' in tensor:
@@ -379,6 +379,7 @@ class DeepLabV3Plus(nn.Module):
         # entry
         tfc.set_prefix('xception_65/entry_flow/')
 
+        tfc.conv(self.encoder.conv1, 'conv1_1')
         tfc.conv(self.encoder.conv2, 'conv1_2')
         tfc.xception_block(self.encoder.entry_block1, 'block1/unit_1/xception_module')
         tfc.xception_block(self.encoder.entry_block2, 'block2/unit_1/xception_module')

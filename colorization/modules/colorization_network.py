@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..cielab import ABGamut, CIELAB, DEFAULT_CIELAB
+from ..util.image import normalize
 from .annealed_mean_decode_q import AnnealedMeanDecodeQ
 from .deeplab_v3_plus import DeepLabV3Plus
 from .get_class_weights import GetClassWeights
@@ -19,6 +20,8 @@ class ColorizationNetwork(nn.Module):
                  device='cuda'):
 
         super().__init__()
+
+        self.base_network_id = base_network
 
         if base_network == 'vgg':
             self.base_network = VGGSegmentationNetwork(ABGamut.EXPECTED_SIZE)
@@ -58,7 +61,11 @@ class ColorizationNetwork(nn.Module):
             l = img
 
         # normalize lightness
-        l_norm = l - CIELAB.L_MEAN
+        if self.base_network_id == 'vgg':
+            l_norm = l - CIELAB.L_MEAN
+        elif self.base_network_id == 'deeplab':
+            l_norm = normalize(l, (-1, 1))
+            l_norm = torch.cat((l_norm,) * 3, dim=1)
 
         # prediction
         q_pred = self.base_network(l_norm)
