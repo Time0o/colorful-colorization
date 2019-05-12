@@ -58,6 +58,7 @@ class ColorizationModel:
                  network,
                  loss=None,
                  optimizer=None,
+                 lr_scheduler=None,
                  log_config=None,
                  logger=None):
         """
@@ -81,6 +82,8 @@ class ColorizationModel:
                 Partially applied training optimizer, parameter argument is
                 supplied by this constructor, if this is set to `None`, the
                 model is not trainable.
+            optimizer (torch.optim.lr_scheduler._LRScheduler, optional):
+                Learning rate scheduler.
             log_config (dict, optional):
                 Python `logging` configuration dictionary, if this is set to
                 `None`, logging will be disabled.
@@ -100,6 +103,11 @@ class ColorizationModel:
             self.optimizer = None
         else:
             self.optimizer = optimizer(network.parameters())
+
+        if lr_scheduler is None:
+            self.lr_scheduler = None
+        else:
+            self.lr_scheduler = lr_scheduler(self.optimizer)
 
         self.device = network.device
 
@@ -173,6 +181,9 @@ class ColorizationModel:
         else:
             i = iteration_init
 
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.max_epochs = iterations
+
         done = False
         while not done:
             for img in dataloader:
@@ -188,6 +199,10 @@ class ColorizationModel:
                 loss.backward()
 
                 self.optimizer.step()
+
+                # update learning rate
+                if self.lr_scheduler is not None:
+                    self.lr_scheduler.step()
 
                 # display progress
                 if self._log_enabled:
@@ -253,7 +268,7 @@ class ColorizationModel:
 
         """
         state = {
-            'network': self.network.state_dict(),
+            'network': self.network.base_network.state_dict(),
         }
 
         if save_optimizer:
@@ -273,7 +288,7 @@ class ColorizationModel:
         """
         state = torch.load(path, map_location=(lambda storage, _: storage))
 
-        self.network.load_state_dict(state['network'])
+        self.network.base_network.load_state_dict(state['network'])
 
         if load_optimizer:
             self.optimizer.load_state_dict(state['optimizer'])

@@ -1,0 +1,37 @@
+{
+    "dataloader": {
+        "type": "torch.utils.data.DataLoader",
+        "params": {
+            "batch_size": 16
+        }
+    },
+    "model": {
+        "params": {
+            "network": {
+                "type": "colorization.modules.colorization_network.ColorizationNetwork",
+                "params": {
+                    "base_network": "deeplab"
+                }
+            },
+            "optimizer": {
+                "type": "colorization.util.training.OptimWrapper",
+                "params": {
+                    "optim_type": "torch.optim.SGD",
+                    "optim_params": {
+                        "lr": 0.0001,
+                        "momentum": 0.00004
+                    }
+                }
+            },
+            "lr_scheduler": {
+                "type": "colorization.util.training.LRSchedulerWrapper",
+                "params": {
+                    "sched_type": "colorization.util.training.PolyLR",
+                    "sched_params": {
+                        "power": 0.9
+                    }
+                }
+            }
+        }
+    }
+}

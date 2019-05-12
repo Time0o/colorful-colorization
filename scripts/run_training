@@ -14,6 +14,12 @@ from colorization.util.argparse import nice_help_formatter
 USAGE = \
 """run_training.py [-h|--help]
                        --config CONFIG
+                       --data-dir DATA_DIR
+                       --checkpoint-dir CHECKPOINT_DIR
+                       --log-file LOG_FILE
+                       --iterations N
+                       --iterations-till-checkpoint N
+                       [--default-config CONFIG]
                        [--init-model-checkpoint CHECKPOINT]
                        [--continue-training]
                        [--random-seed SEED]"""
@@ -27,6 +33,33 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         required=True,
                         help="training configuration JSON file")
+
+    parser.add_argument('--data-dir',
+                        required=True,
+                        help="training data directory")
+
+    parser.add_argument('--checkpoint-dir',
+                        required=True,
+                        help="directory in which to save model checkpoints")
+
+    parser.add_argument('--log-file',
+                        required=True,
+                        help="file to which to write log data")
+
+    parser.add_argument('--iterations',
+                        required=True,
+                        metavar='N',
+                        type=int,
+                        help="number of iterations")
+
+    parser.add_argument('--iterations-till-checkpoint',
+                        required=True,
+                        metavar='N',
+                        type=int,
+                        help="iterations between checkpoints")
+
+    parser.add_argument('--default-config',
+                        help="training fallback configuration JSON file")
 
     parser.add_argument('--init-model-checkpoint',
                         metavar='CHECKPOINT',
@@ -48,7 +81,13 @@ if __name__ == '__main__':
         torch.manual_seed(args.random_seed)
 
     # load configuration file(s)
-    cfg = config.get_config(args.config)
+    cfg = config.get_config(args.config, args.default_config)
+
+    config.modify_config(
+        cfg, 'dataloader/params/dataset/params/root', args.data_dir)
+    config.modify_config(
+        cfg, 'model/params/log_config/handlers/file/filename', args.log_file)
+
     cfg = config.parse_config(cfg)
 
     dataloader = cfg['dataloader']
@@ -56,16 +95,21 @@ if __name__ == '__main__':
 
     # initialize model and run training
 
+    def train(**kwargs):
+        model.train(dataloader,
+                    iterations=args.iterations,
+                    iterations_till_checkpoint=args.iterations_till_checkpoint,
+                    checkpoint_dir=args.checkpoint_dir,
+                    **kwargs)
+
     if args.continue_training:
         if args.init_model_checkpoint is None:
             raise ValueError("no model checkpoint specified")
 
-        model.train(dataloader,
-                    checkpoint_init=args.init_model_checkpoint,
-                    **cfg['training_args'])
+        train(checkpoint_init=args.init_model_checkpoint)
     else:
         if args.init_model_checkpoint is not None:
             model.load_checkpoint(args.init_model_checkpoint,
                                   load_optimizer=args.continue_training)
 
-        model.train(dataloader, **cfg['training_args'])
+        train()
