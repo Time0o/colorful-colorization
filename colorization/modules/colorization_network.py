@@ -55,34 +55,48 @@ class ColorizationNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, img):
+        # label transformation
         if self.training:
-            l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+            return self.forward_encode(img)
         else:
-            l = img
+            return self.forward_decode(img)
 
-        # normalize lightness
+    def forward_encode(self, img):
+        l, ab = img[:, :1, :, :], img[:, 1:, :, :]
+
+        l_norm = self._normalize_l(l)
+
+        q_pred = self.base_network(l_norm)
+
+        # downsample and encode labels
+        ab = F.interpolate(ab, size=q_pred.shape[2:])
+        q_actual = self.encode_ab(ab)
+
+        # rebalancing
+        if self.class_rebal_lambda is not None:
+            color_weights = self.get_class_weights(q_actual)
+            q_pred = self.rebalance_loss(q_pred, color_weights)
+
+        return q_pred, q_actual
+
+    def forward_decode(self, img):
+        l = img
+
+        l_norm = self._normalize_l(l)
+
+        q_pred = self.base_network(l_norm)
+
+        ab_pred = self.decode_q(q_pred)
+
+        return ab_pred
+
+    def _normalize_l(self, l):
         if self.base_network_id == 'vgg':
             l_norm = l - CIELAB.L_MEAN
         elif self.base_network_id == 'deeplab':
             l_norm = normalize(l, (-1, 1))
             l_norm = torch.cat((l_norm,) * 3, dim=1)
 
-        # prediction
+        return l_norm
+
         q_pred = self.base_network(l_norm)
-
-        # label transformation
-        if self.training:
-            # downsample and encode labels
-            ab = F.interpolate(ab, size=q_pred.shape[2:])
-            q_actual = self.encode_ab(ab)
-
-            # rebalancing
-            if self.class_rebal_lambda is not None:
-                color_weights = self.get_class_weights(q_actual)
-                q_pred = self.rebalance_loss(q_pred, color_weights)
-
-            return q_pred, q_actual
-        else:
-            ab_pred = self.decode_q(q_pred)
-
-            return ab_pred

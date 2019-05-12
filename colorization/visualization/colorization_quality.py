@@ -10,16 +10,7 @@ from ..cielab import DEFAULT_CIELAB
 from ..util.image import images_in_directory, imread, rgb_to_lab
 from .io import read_classification, read_labels, read_lines
 from .plot import subplot_divider, subplots
-
-
-def _display_progress(i, i_end, msg='processing image'):
-    fmt = "{} {}/{}"
-
-    ljust = len(fmt.format(msg, i_end, i_end))
-
-    end = '\n' if i == i_end - 1 else ''
-
-    print('\r' + fmt.format(msg, i + 1, i_end).ljust(ljust), end=end)
+from .progress import display_progress
 
 
 def _raw_accuracy(ab_pred, ab_label, thresh, reweigh_classes=False):
@@ -178,7 +169,7 @@ def raw_accuracy_demo(ground_truth_dir,
 
     for i, image_path in enumerate(image_paths):
         if verbose:
-            _display_progress(i, len(image_paths))
+            display_progress(i, len(image_paths))
 
         img_rgb = imread(os.path.join(ground_truth_dir, image_path))
         img_pred = imread(os.path.join(predict_color_dir, image_path))
