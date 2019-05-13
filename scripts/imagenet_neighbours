@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+import textwrap
+
+from nltk.corpus import wordnet as wn
+
+sys.path.insert(1, os.path.join(sys.path[0], ('..')))
+
+from colorization.util.resources import get_resource_path
+
+
+WORD2VEC_MODEL = 'word2vec-google-news-300.gz'
+KAGGLE_IMAGENET_LABELS = 'LOC_synset_mapping.txt'
+
+
+synset_ids = {}
+
+with open(get_resource_path(KAGGLE_IMAGENET_LABELS), 'r') as f:
+    for line in f:
+        line = line.rstrip()
+
+        synset_id, nouns = line.split(maxsplit=1)
+        main_noun = nouns.split(', ', 1)[0].lower()
+
+        synset_ids[main_noun] = synset_id
+
+
+class ListSynsets(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+        print('\n'.join(sorted(synset_ids.keys())))
+        parser.exit()
+
+
+if __name__ == '__main__':
+    # parse command line arguments
+    parser = argparse.ArgumentParser(
+        description=str("Find semantically close ImageNet synsets from their "
+                        "WordNet path similarities."))
+
+    parser.add_argument('synset',
+                        metavar='SYNSET',
+                        help=str("plaintext shorthand for synset for which to "
+                                 "determine neighbours"))
+
+    parser.add_argument('n',
+                        metavar='N',
+                        type=int,
+                        help="number of neighbours to list")
+
+
+    parser.add_argument('--list-synsets',
+                        action=ListSynsets,
+                        nargs=0,
+                        help=str("ignore other options and display plaintext "
+                                 "shorthands of all available synsets"))
+
+    args = parser.parse_args()
+
+    # parse imagenet labels
+    noun = args.synset
+
+    if noun not in synset_ids:
+        print("'{}' is not a valid synset" .format(noun, file=sys.stderr))
+        sys.exit(1)
+
+    noun_id = synset_ids[noun]
+
+    similarities = []
+
+    for other, other_id in synset_ids.items():
+        s_noun = wn.synset_from_pos_and_offset('n', int(noun_id[1:]))
+        s_other = wn.synset_from_pos_and_offset('n', int(other_id[1:]))
+
+        sim = wn.path_similarity(s_noun, s_other)
+        similarities.append((other, sim))
+
+    similarities.sort(key=lambda sim: -sim[1])
+
+    for other, _ in similarities[:args.n]:
+        print(synset_ids[other], other)
