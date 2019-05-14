@@ -12,8 +12,16 @@ sys.path.insert(1, os.path.join(sys.path[0], ('..')))
 from colorization.util.resources import get_resource_path
 
 
-WORD2VEC_MODEL = 'word2vec-google-news-300.gz'
 KAGGLE_IMAGENET_LABELS = 'LOC_synset_mapping.txt'
+
+USAGE = """\
+imagenet_neighbours [-h|--help]
+                           [--list-synsets]
+                           [--plaintext-only]
+                           [--synset-only]
+                           [--sort {similarity,synset,plaintext}]
+                           SYNSET N
+"""
 
 
 synset_ids = {}
@@ -37,6 +45,7 @@ class ListSynsets(argparse.Action):
 if __name__ == '__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser(
+        usage=USAGE,
         description=str("Find semantically close ImageNet synsets from their "
                         "WordNet path similarities."))
 
@@ -50,20 +59,37 @@ if __name__ == '__main__':
                         type=int,
                         help="number of neighbours to list")
 
-
     parser.add_argument('--list-synsets',
                         action=ListSynsets,
                         nargs=0,
                         help=str("ignore other options and display plaintext "
                                  "shorthands of all available synsets"))
 
+    parser.add_argument('--plaintext-only',
+                        action='store_true',
+                        help="only display plaintext shorthands")
+
+    parser.add_argument('--synset-only',
+                        action='store_true',
+                        help="only display synset ids")
+
+    parser.add_argument('--sort',
+                        choices=['similarity', 'synset', 'plaintext'],
+                        default='similarity')
+
     args = parser.parse_args()
+
+    if args.plaintext_only and args.synset_only:
+        err = "--plaintext-only and --synset-only may not be specified together"
+        print(err, file=sys.stderr)
+        sys.exit(1)
 
     # parse imagenet labels
     noun = args.synset
 
     if noun not in synset_ids:
-        print("'{}' is not a valid synset" .format(noun, file=sys.stderr))
+        fmt = "'{}' is not a valid synset plaintext shorthand"
+        print(fmt.format(noun, file=sys.stderr))
         sys.exit(1)
 
     noun_id = synset_ids[noun]
@@ -75,9 +101,20 @@ if __name__ == '__main__':
         s_other = wn.synset_from_pos_and_offset('n', int(other_id[1:]))
 
         sim = wn.path_similarity(s_noun, s_other)
-        similarities.append((other, sim))
+        similarities.append((synset_ids[other], other, sim))
 
-    similarities.sort(key=lambda sim: -sim[1])
+    similarities.sort(key=lambda sim: -sim[2])
+    similarities = similarities[:args.n]
 
-    for other, _ in similarities[:args.n]:
-        print(synset_ids[other], other)
+    if args.sort == 'synset':
+        similarities.sort(key=lambda sim: sim[0])
+    elif args.sort == 'plaintext':
+        similarities.sort(key=lambda sim: sim[1])
+
+    for synset, plaintext, _ in similarities:
+        if args.plaintext_only:
+            print(plaintext)
+        elif args.synset_only:
+            print(synset)
+        else:
+            print(synset, plaintext)

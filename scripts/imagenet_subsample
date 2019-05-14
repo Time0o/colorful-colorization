@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+from shutil import copy
+
+
+def read_lines(path):
+    with open(path, 'r') as f:
+        return [line.rstrip() for line in f]
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('synsets', metavar='SYNSETS')
+    parser.add_argument('subsynsets', metavar='SUBSYNSETS')
+    parser.add_argument('image_labels', metavar='IMAGE_LABELS')
+    parser.add_argument('--indir')
+    parser.add_argument('--outdir')
+    parser.add_argument('--verbose', action='store_true')
+
+    args = parser.parse_args()
+
+    if (args.indir is None) != (args.outdir is None):
+        print("--indir and --outdir must be given together", file=sys.stderr)
+        sys.exit(1)
+    
+    synsets = read_lines(args.synsets)
+    subsynsets = read_lines(args.subsynsets)
+
+    image_labels = []
+    for il in read_lines(args.image_labels):
+        img, label = il.split()
+        image_labels.append((img, int(label)))
+
+    sublabels = set(synsets.index(ss) for ss in subsynsets)
+    subimages = [img for img, label in image_labels if label in sublabels]
+
+    if args.indir is not None and args.outdir is not None:
+        if os.path.exists(args.outdir):
+            print("'{}' already exists".format(args.outdir))
+            sys.exit(1)
+
+        os.mkdir(args.outdir)
+
+        subimages = set(subimages)
+
+        for img in os.listdir(args.indir):
+            if args.verbose:
+                print("copying {}".format(img))
+
+            if img not in subimages:
+                continue
+
+            infile = os.path.join(args.indir, img)
+            outfile = os.path.join(args.outdir, img)
+
+            copy(infile, outfile)
+    else:
+        print('\n'.join(subimages))
