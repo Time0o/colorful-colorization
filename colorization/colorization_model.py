@@ -153,6 +153,9 @@ class ColorizationModel:
             self.load_checkpoint(checkpoint_init, load_optimizer=True)
             iteration_init = self._checkpoint_iteration(checkpoint_init)
 
+            if iteration_init == 'final':
+                raise ValueError("cannot continue training from final checkpoint")
+
         # validate checkpoint directory
         if checkpoint_dir is not None:
             self._validate_checkpoint_dir(
@@ -179,7 +182,7 @@ class ColorizationModel:
         if checkpoint_init is None:
             i = 1
         else:
-            i = iteration_init
+            i = iteration_init + 1
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.max_epochs = iterations
