@@ -58,43 +58,29 @@ def _auc(ab_pred,
 
 def good_vs_bad_demo(images_good_file,
                      images_bad_file,
-                     ground_truth_dir,
-                     predict_color_dir,
-                     predict_color_norebal_dir):
+                     image_dirs):
 
     image_paths_good = read_lines(images_good_file)
     image_paths_bad = read_lines(images_bad_file)
 
-    fig, axes = subplots(
-        len(image_paths_good) + len(image_paths_bad), 4, use_gridspec=False)
+    fig, axes = subplots(len(image_paths_good) + len(image_paths_bad),
+                         len(image_dirs),
+                         use_gridspec=False)
 
     for r, image_path in enumerate(chain(image_paths_good, image_paths_bad)):
-        img_gt = imread(os.path.join(ground_truth_dir, image_path))
-        img_pc = imread(os.path.join(predict_color_dir, image_path))
-        img_pc_nr = imread(os.path.join(predict_color_norebal_dir, image_path))
+        for c, (image_dir, title) in enumerate(image_dirs):
+            img = imread(os.path.join(image_dir, image_path))
 
-        # input
-        axes[r, 0].imshow(rgb_to_lab(img_gt)[:, :, 0], cmap='gray')
+            axes[r, c].imshow(img)
 
-        # prediction
-        axes[r, 1].imshow(img_pc)
-
-        # prediction (with class rebalancing)
-        axes[r, 2].imshow(img_pc_nr)
-
-        # ground truth
-        axes[r, 3].imshow(img_gt)
+            if r == 0:
+                axes[r, c].set_title(title)
 
     # plot divider
     plt.tight_layout()
 
-    subplot_divider(fig, axes, 'horizontal', len(image_paths_good) - 1)
-
-    # add titles
-    axes[0, 0].set_title("Input")
-    axes[0, 1].set_title("Classification")
-    axes[0, 2].set_title("Classification\n(w/ Rebalancing)")
-    axes[0, 3].set_title("Ground Truth")
+    if image_paths_good and image_paths_bad:
+        subplot_divider(fig, axes, 'horizontal', len(image_paths_good) - 1)
 
 
 def amt_demo(accuracies_file,
