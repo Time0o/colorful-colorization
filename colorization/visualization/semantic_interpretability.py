@@ -16,9 +16,9 @@ def _classification_performance(image_dir):
     classified = read_classification(image_dir)
 
     filenames_by_label = get_filenames_by_label(labels)
-    num_labels = len(filenames_by_label)
 
-    class_accuracies = np.empty(num_labels, dtype=float)
+    num_labels = max(filenames_by_label.keys()) + 1
+    class_accuracies = np.full(num_labels, np.nan)
 
     for label, filenames in filenames_by_label.items():
         correct = 0
@@ -36,12 +36,12 @@ def _confusion_matrix(image_dir):
     classified = read_classification(image_dir)
 
     filenames_by_label = get_filenames_by_label(labels)
-    num_labels = len(filenames_by_label)
 
+    num_labels = max(filenames_by_label.keys()) + 1
     c = np.zeros(((num_labels,) * 2))
 
     for ground_truth_label, filenames in filenames_by_label.items():
-        for label in range(num_labels):
+        for label in filenames_by_label:
             correct = 0
             for filename in filenames:
                 if label in classified[filename]:
@@ -62,23 +62,26 @@ def gray_vs_recolorized_performance(no_color_dir,
     
     a_rel_sorted = np.argsort(a_predict_color - a_no_color)
     
-    _, ax = subplots()
+    # plot results
+    _, ax = subplots(no_ticks=False)
 
     ax.scatter(a_no_color, a_predict_color, color='k')
     
-    ax.scatter(a_no_color[a_rel_sorted[-n_top:]],
-               a_predict_color[a_rel_sorted[-n_top:]],
-               facecolor='b',
-               edgecolor='k',
-               s=100,
-               label="Top {}".format(n_top))
+    if n_top > 0:
+        ax.scatter(a_no_color[a_rel_sorted[-n_top:]],
+                   a_predict_color[a_rel_sorted[-n_top:]],
+                   facecolor='b',
+                   edgecolor='k',
+                   s=100,
+                   label="Top {}".format(n_top))
 
-    ax.scatter(a_no_color[a_rel_sorted[:n_bottom]],
-               a_predict_color[a_rel_sorted[:n_bottom]],
-               facecolor='r',
-               edgecolor='k',
-               s=100,
-               label="Bottom {}".format(n_bottom))
+    if n_bottom > 0:
+        ax.scatter(a_no_color[a_rel_sorted[:n_bottom]],
+                   a_predict_color[a_rel_sorted[:n_bottom]],
+                   facecolor='r',
+                   edgecolor='k',
+                   s=100,
+                   label="Bottom {}".format(n_bottom))
 
     ax.plot([0, 1], [0, 1], color='k')
     
@@ -89,7 +92,9 @@ def gray_vs_recolorized_performance(no_color_dir,
     ax.set_xlim([0, 1])
     ax.set_ylim([0, 1])
 
-    ax.legend()
+    if n_top > 0 or n_bottom > 0:
+        ax.legend()
+
     ax.grid()
 
 
@@ -103,14 +108,19 @@ def top5_confusion_rates(ground_truth_dir, predict_color_dir, n_top=100):
 
     a_rel_sorted = np.argsort(c_predict_color - c_ground_truth)
 
-    _, ax = subplots()
+    # plot results
+    _, ax = subplots(no_ticks=False)
 
     ax.scatter(c_ground_truth, c_predict_color, color='k')
 
     ax.scatter(c_ground_truth[a_rel_sorted[-n_top:]],
                c_predict_color[a_rel_sorted[-n_top:]],
-               color='r',
+               facecolor='r',
+               edgecolor='k',
+               s=100,
                label="Top {}".format(n_top))
+
+    ax.plot([0, 1], [0, 1], color='k')
 
     ax.set_title("Confusion Rates Before & After Recoloring")
     ax.set_xlabel("Grayscale")
@@ -136,7 +146,7 @@ def common_confusions(ground_truth_dir, predict_color_dir, which, n_per_class=5)
     labels = read_labels(ground_truth_dir)
     filenames_by_label = get_filenames_by_label(labels)
 
-    classified_gt = read_classification(predict_color_dir)
+    classified_gt = read_classification(ground_truth_dir)
     classified_pc = read_classification(predict_color_dir)
 
     imagenet_plaintext_labels = get_imagenet_plaintext_labels()
@@ -145,8 +155,8 @@ def common_confusions(ground_truth_dir, predict_color_dir, which, n_per_class=5)
         demo_images = []
     
         for filename in filenames_by_label[c_top[i]]:
-            confused_gt = d_top[i] in classified_pc[filename]
-            confused_pc = d_top[i] not in classified_gt[filename]
+            confused_gt = d_top[i] in classified_gt[filename]
+            confused_pc = d_top[i] in classified_pc[filename]
             
             if not confused_gt and confused_pc:
                 demo_images.append(filename)
@@ -169,8 +179,8 @@ def common_confusions(ground_truth_dir, predict_color_dir, which, n_per_class=5)
         c_name = imagenet_plaintext_labels[c_top[i]]
         d_name = imagenet_plaintext_labels[d_top[i]]
 
-        fmt = r"{} $\longrightarrow$ {} ({})"
-        plt.suptitle(fmt.format(c_name, d_name, i + 1), fontsize=FONTSIZE)
+        fmt = r"{} $\longrightarrow$ {}"
+        plt.suptitle(fmt.format(c_name, d_name), fontsize=FONTSIZE)
 
         axes[0, 0].set_ylabel("Ground Truth", fontsize=FONTSIZE)
         axes[1, 0].set_ylabel("Recolored", fontsize=FONTSIZE)
