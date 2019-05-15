@@ -2,7 +2,6 @@ name: colorization-pytorch
 
 channels:
     - default
-    - lukepfister
     - pytorch
 
 dependencies:
@@ -10,8 +9,6 @@ dependencies:
     - cudatoolkit = 9.0
     - matplotlib
     - numpy
-    - psutil
-    - pycuda
     - pytorch-nightly
     - scikit-image
     - torchvision
