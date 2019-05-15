@@ -25,6 +25,7 @@ USAGE = \
 """convert_images.py [-h|--help]
                          --input-dir INPUT_DIR
                          --output-dir OUTPUT_DIR
+                         [--force]
                          [--color-source-dir COLOR_SOURCE_DIR]
                          [--base-network NETWORK_ID]
                          [--annealed-mean-T ANNEALED_MEAN_T]
@@ -78,6 +79,7 @@ def _predict_color(args):
                 print("processing '{}'".format(filename[0]))
 
             l = torch_to_numpy(l_torch)
+            l_torch = l_torch.to(device)
             ab = resize(torch_to_numpy(model.predict(l_torch)), l.shape[:2])
 
             out_img = lab_to_rgb(np.dstack((l, ab)))
@@ -101,6 +103,10 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir',
                         required=True,
                         help="output image directory")
+
+    parser.add_argument('--force',
+                        action='store_true',
+                        help="overwrite output directory")
 
     parser.add_argument('--resize-height',
                         type=int,
@@ -162,7 +168,7 @@ if __name__ == '__main__':
 
     # create output directory
     if os.path.exists(args.output_dir):
-        if os.listdir(args.output_dir):
+        if not args.force and os.listdir(args.output_dir):
             raise ValueError("'{}' already exists".format(args.output_dir))
     else:
         os.mkdir(args.output_dir)
