@@ -167,13 +167,11 @@ def raw_accuracy_demo(ground_truth_dir,
         if verbose:
             display_progress(i, len(image_paths))
 
-        img_rgb = imread(os.path.join(ground_truth_dir, image_path))
-        img_pred = imread(os.path.join(predict_color_dir, image_path))
+        img_gt = imread(os.path.join(ground_truth_dir, image_path))
+        img_pc = imread(os.path.join(predict_color_dir, image_path))
 
-        img_lab = rgb_to_lab(img_rgb)
-
-        auc_total += _auc(img_lab[:, :, 1:],
-                          img_pred[:, :, 1:],
+        auc_total += _auc(rgb_to_lab(img_gt)[:, :, 1:],
+                          rgb_to_lab(img_pc)[:, :, 1:],
                           reweigh_classes=reweigh_classes)
 
     return auc_total / len(image_paths)
