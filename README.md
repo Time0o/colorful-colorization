@@ -70,7 +70,7 @@ directory `dir1` and subsequently run:
 
 ```
 ./scripts/convert_images predict_color \
-	--input-dir dir1 \
+    --input-dir dir1 \
     --output-dir dir2 \
     --model-checkpoint PYTORCH_WEIGHTS.tar \
     --gpu \
@@ -110,7 +110,7 @@ you may want to run:
 
 ```
 ./scripts/prepare_dataset dir1 \
-	--flatten \
+    --flatten \
     --purge \
     --clean \
     --file-ext JPEG \
@@ -150,7 +150,7 @@ Once you have decided on a configuration file you can run the script as follows:
 
 ```
 ./scripts/run_training \
-	--config YOUR_CONFIG.json \
+    --config YOUR_CONFIG.json \
     --default-config config/default.json \
     --data-dir dir1 \
     --checkpoint-dir YOUR_CHECKPOINT_DIR \
@@ -179,7 +179,7 @@ training iterations).
 Colorizing images programmatically using our implementation is very simple. You
 first need to instantiate the network itself:
 
-```
+```python
 from colorization.modules.colorization_network import ColorizationNetwork
 
 network = ColorizationNetwork(base_network='vgg', annealed_mean_T=0.38, device='gpu')
@@ -191,7 +191,7 @@ run the network on the GPU.
 You will then need to wrap the network in an instance of `ColorizationModel`
 which implements (among other things) checkpoint saving/loading:
 
-```
+```python
 from colorization.colorization_model import ColorizationModel
 
 model = ColorizationModel(network)
@@ -209,7 +209,7 @@ In order to colorize a grayscale image you should then:
 
 All of this is already implemented in a convenience function:
 
-```
+```python
 from colorization.util.image import imread, predict_color
 
 img = imread('YOUR_IMAGE.jpg')
