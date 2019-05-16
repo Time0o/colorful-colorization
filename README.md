@@ -61,6 +61,27 @@ downloaded by `resources/get_resources.sh`, you can call the script like this:
 
 Which will save the converted PyTorch weights to `PYTORCH_WEIGHTS.tar`.
 
+## Colorize Images with Pretrained Weights
+
+The easiest way to colorize several grayscale images of arbitrary size is to
+place them in the same directory and colorize them in batch mode using
+`scripts/convert_images`. For example, if you have placed the images in
+directory `dir1` and subsequently run:
+
+```
+./scripts/convert_images predict_color \
+	--input-dir dir1 \
+    --output-dir dir2 \
+    --model-checkpoint PYTORCH_WEIGHTS.tar \
+    --gpu \
+    --verbose
+```
+
+The script will colorize all images in `dir1` on the GPU and place the results
+in `dir2` (with the same filenames). If your model checkpoint was not created
+from a VGG style network, you will need to explicitly specify `--base-network`.
+You can also choose an annealed mean temperature parameter other then the
+default 0.38 with `--annealed-mean-T`. .
 
 ## References
 
