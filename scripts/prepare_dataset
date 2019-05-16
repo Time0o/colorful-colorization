@@ -25,19 +25,21 @@ ALL_SUBDIRS = [
 ]
 
 USAGE = \
-"""usage: prepare_dataset.py [-h|--help]
-                                 [--flatten]
-                                 [--purge]
-                                 [--clean]
-                                 [--reduce N]
-                                 [--file-ext EXT]
-                                 [--val-split VAL_SPLIT]
-                                 [--test-split TEST_SPLIT]
-                                 [--no-shuffle]
-                                 [--create-lmdb]
-                                 [--convert-imageset SCRIPT]
-                                 [--verbose]
-                                 DATA_DIR"""
+"""usage: prepare_dataset [-h|--help]
+                              [--flatten]
+                              [--purge]
+                              [--clean]
+                              [--reduce N]
+                              [--file-ext EXT]
+                              [--val-split VAL_SPLIT]
+                              [--test-split TEST_SPLIT]
+                              [--no-shuffle]
+                              [--resize-height RESIZE_HEIGHT]
+                              [--resize-width RESIZE_WIDTH]
+                              [--create-lmdb]
+                              [--convert-imageset SCRIPT]
+                              [--verbose]
+                              DATA_DIR"""
 
 
 def _is_processed(data_dir):
