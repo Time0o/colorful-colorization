@@ -56,7 +56,10 @@ def bbox(fig, ax):
     return ax.get_tightbbox(r).transformed(fig.transFigure.inverted())
 
 
-def subplot_divider(fig, axes, orientation, n):
+def subplot_divider(fig, axes, orientation, n, n_next=None):
+    if n_next is None:
+        n_next = n + 1
+
     bbox_ = partial(bbox, fig)
 
     line2d = partial(Line2D,
@@ -65,10 +68,10 @@ def subplot_divider(fig, axes, orientation, n):
                      linestyle='--')
 
     if orientation == 'horizontal':
-        y = (bbox_(axes[n, 0]).y1 + bbox_(axes[n + 1, 0]).y0) / 2
+        y = (bbox_(axes[n, 0]).y1 + bbox_(axes[n_next, 0]).y0) / 2
         line = line2d([0, 1], [y, y])
     elif orientation == 'vertical':
-        x = (bbox_(axes[0, n]).x1 + bbox_(axes[0, n + 1]).x0) / 2
+        x = (bbox_(axes[0, n]).x1 + bbox_(axes[0, n_next]).x0) / 2
         line = line2d([x, x], [0, 1])
     else:
         raise ValueError("orientation must be 'horizontal' or 'vertical'")

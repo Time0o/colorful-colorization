@@ -30,15 +30,18 @@ def annealed_mean_demo(model, image_dir, ts=None, verbose=False):
 
     # add titles
     for i, (t, ax) in enumerate(zip(ts, axes[0, :])):
-        suptitle = {
+        title = {
             0: "Mean",
             len(ts) // 2: "Annealed Mean",
             len(ts) - 1: "Mode"
         }.get(i, '')
 
-        if t == 0:
-            title_fmt = "{}\n$T\\rightarrow{}$"
-        else:
-            title_fmt = "{}\n$T={}$"
+        if title:
+            title += '\n'
 
-        ax.set_title(title_fmt.format(suptitle, t))
+        if t == 0:
+            title += "$T\\rightarrow{}$"
+        else:
+            title += "$T={}$"
+
+        ax.set_title(title.format(t))
