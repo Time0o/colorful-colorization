@@ -10,7 +10,7 @@ The following sections describe in detail:
 * how to install the dependencies necessary to get started with this project
 * how to colorize grayscale images using pretrained network weights
 * how to train the network on a new dataset
-* how to run colorization and training programatically
+* how to run colorization programatically
 
 ## Prerequisites
 
@@ -173,6 +173,48 @@ from `INIT_MODEL_CHECKPOINT.tar` (which has to be a checkpoint created by a
 previous run of `scripts/run_training`) and pick the training up from the last
 training iteration (thus `ITERATIONS` still specifies the total number of
 training iterations).
+
+## Colorize Images Programmatically
+
+Colorizing images programmatically using our implementation is very simple. You
+first need to instantiate the network itself:
+
+```
+from colorization.modules.colorization_network import ColorizationNetwork
+
+network = ColorizationNetwork(base_network='vgg', annealed_mean_T=0.38, device='gpu')
+```
+
+The parameters should be self explanatory, use `device='cpu'` if you plan to
+run the network on the GPU.
+
+You will then need to wrap the network in an instance of `ColorizationModel`
+which implements (among other things) checkpoint saving/loading:
+
+```
+from colorization.colorization_model import ColorizationModel
+
+model = ColorizationModel(network)
+model.load_checkpoint('YOUR_CHECKPOINT_DIR/checkpoint_final.tar')
+```
+
+In order to colorize a grayscale image you should then:
+* load it into a numpy array
+* resize a copy of it to 224x224 (this is not strictly necessary but produces
+  better results)
+* convert it to a torch tensor
+* pass it through the model
+* reassemble the result
+
+
+All of this is already implemented in a convenience function:
+
+```
+from colorization.util.image import imread, predict_color
+
+img = imread('YOUR_IMAGE.jpg')
+img_colorized = predict_color(img)
+```
 
 ## References
 
