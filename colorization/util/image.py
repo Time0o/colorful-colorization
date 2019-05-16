@@ -116,13 +116,17 @@ def imsave(path, img):
         io.imsave(path, img.astype(np.uint8))
 
 
-def predict_color(model, img):
+def predict_color(model, img, input_size=(224, 224)):
+    img_resized = resize(img, input_size)
+
     if is_rgb(img):
         l = rgb_to_lab(img)[:, :, :1]
+        l_resized = rgb_to_lab(img_resized)[:, :, :1]
     else:
         l = img.reshape(*img.shape[:2], 1)
+        l_resized = img_resized.reshape(*img_resized.shape[:2], 1)
 
-    l_torch = numpy_to_torch(l)
+    l_torch = numpy_to_torch(l_resized)
     ab = resize(torch_to_numpy(model.predict(l_torch)), l.shape[:2])
 
     return lab_to_rgb(np.dstack((l, ab)))
