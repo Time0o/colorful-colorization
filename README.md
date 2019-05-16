@@ -83,6 +83,97 @@ from a VGG style network, you will need to explicitly specify `--base-network`.
 You can also choose an annealed mean temperature parameter other then the
 default 0.38 with `--annealed-mean-T`. .
 
+## Train the Network
+
+### Prepare a Dataset
+
+If you intend to train the network on your own dataset, you might want to use
+the convenience scripts `scripts/prepare_dataset` to convert it into a form
+suitable for training. For example, if all your images are stored in a
+directory tree similar to this one:
+
+```
+dir1/
+├── subdir1
+│   ├── img1.JPEG
+│   ├── img2.JPEG
+│   └── ...
+├── subdir2
+│   ├── img1.JPEG
+│   ├── img2.JPEG
+│   └── ...
+└── ...
+
+```
+
+you may want to run:
+
+```
+./scripts/prepare_dataset dir1 \
+	--flatten \
+    --purge \
+    --clean \
+    --file-ext JPEG \
+    --val-split 0.2 \
+    --test-split 0.1 \
+    --resize-height 256 \
+    --resize-width 256 \
+    --verbose
+```
+
+The script will first recursively look for images files with the extension
+`.JPEG` in `dir1` and remove all other files and those images that cannot be
+read or converted to RGB. It will then resize all remaining images to 256x256
+and randomly place them in the newly created subdirectories `train`, `val` and
+`test` using a 70/20/10 split.
+
+Note that this will take a while for large datasets since every single image
+has to be read into memory. If your images already have the desired size (this
+does not necessarily have to be 256x256, the network is fully convolutional and
+can train on images of arbitrary size) and you are sure that none of them are
+corrupted, you don't have to use the `--resize-height/--resize-width` and
+`--clean` arguments which will speed up the process considerably.
+
+### Run the Training
+
+To train the network on your dataset you can use the script
+`scripts/run_training`. The script accepts command line arguments that control
+e.g. the duration of the training and where/how often logfiles and model
+checkpoints are written. More specific settings like dataloader configuration,
+network type and optimizer settings need to be specified via a configuration
+file which is essentially a nested directory of Python objects converted to
+JSON. Most likely you will want to use `config/default.json` and provide
+specific settings or override some defaults in a separate JSON file. See
+`config/vgg.json` for an example.
+
+Once you have decided on a configuration file you can run the script as follows:
+
+```
+./scripts/run_training \
+	--config YOUR_CONFIG.json \
+    --default-config config/default.json \
+    --data-dir dir1 \
+    --checkpoint-dir YOUR_CHECKPOINT_DIR \
+    --log-file YOUR_LOG_FILE.txt \
+    --iterations ITERATIONS \
+    --iterations-till-checkpoint ITERATIONS_TILL_CHECKPOINT \
+    --init-model-checkpoint INIT_MODEL-CHECKPOINT.tar
+```
+
+This will recursively merge the configurations in `YOUR_CONFIG.json` and
+`config/default.json` and then train on the the images in `dir1` for
+`ITERATIONS` iterations (batches). Every `ITERATIONS_TILL_CHECKPOINT`
+iterations, an intermediate model checkpoint will be written to
+`YOUR_CHECKPOINT_DIR`. Specifying `--init-model-checkpoint` is optional but
+useful if you want to finetune the network from some pretrained set of weights.
+
+You can also continue training from an arbitrary training checkpoint using the
+`--continue-training` flag which will load network weights and optimizer state
+from `INIT_MODEL_CHECKPOINT.tar` (which has to be a checkpoint created by a
+previous run of `scripts/run_training`) and pick the training up from the last
+training iteration (thus `ITERATIONS` still specifies the total number of
+training iterations).
+
 ## References
 
 [1] *Colorful Image Colorization*, Zhang, Richard and Isola, Phillip and Efros,
