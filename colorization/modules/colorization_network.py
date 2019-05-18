@@ -13,11 +13,42 @@ from .vgg_segmentation_network import VGGSegmentationNetwork
 
 
 class ColorizationNetwork(nn.Module):
+    """Wrapper class implementing input encoding, output decoding and class
+       rebalancing.
+
+    This class is independent of the concrete underlying network (by default
+    the VGG style architecture described by Zhang et al.) so that the latter
+    can in principle be exchanged for another network by modifying the
+    `base_network` attribute.
+
+    """
+
     def __init__(self,
                  base_network='vgg',
                  annealed_mean_T=0.38,
                  class_rebal_lambda=None,
                  device='cuda'):
+        """
+        Construct the network.
+
+        Args:
+            base_network (str):
+                Underlying base network, currently it is not recommended to
+                explictly use this parameter and to only work with the default
+                VGG style base network.
+            annealed_mean_T (float):
+                Annealed mean temperature parameter, should be between 0.0 and
+                1.0. Lower values result in less saturated but more spatially
+                consistent outputs.
+            class_rebal_lambda (float, optional):
+                Class rebalancing parameter, class rebalancing is NOT enabled
+                by default (i.e. when this is `None`). Zhang et al. recommend
+                setting this parameter to 0.5.
+            device (str):
+                Device on which to run the network (i.e. `'cpu'` or `'cuda'`),
+                note that this can not be changed post construction.
+
+        """
 
         super().__init__()
 
@@ -55,13 +86,32 @@ class ColorizationNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, img):
+        """"Network forward pass.
+
+        img (torch.Tensor):
+            A tensor of shape `(n, 1, h, w)` where `n` is the size of the
+            batch to be predicted and `h` and `w` are image dimensions.
+            Must be located on the same device as this network. The
+            images should be Lab lightness channels.
+
+        Returns:
+            If this network is in training mode: A tuple containing two tensors
+            of shape `(n, Q, h, w)`, where `Q` is the number of ab output bins.
+            The first element of this tuple is the predicted ab bin distribution
+            and the second the soft encoded ground truth ab bin distribution.
+
+            Else, if this model is in evaluation mode: A tensor of shape
+            `(n, 1, h, w)` containing the predicted ab channels.
+
+        """
+
         # label transformation
         if self.training:
-            return self.forward_encode(img)
+            return self._forward_encode(img)
         else:
-            return self.forward_decode(img)
+            return self._forward_decode(img)
 
-    def forward_encode(self, img):
+    def _forward_encode(self, img):
         l, ab = img[:, :1, :, :], img[:, 1:, :, :]
 
         l_norm = self._normalize_l(l)
@@ -79,7 +129,7 @@ class ColorizationNetwork(nn.Module):
 
         return q_pred, q_actual
 
-    def forward_decode(self, img):
+    def _forward_decode(self, img):
         l = img
 
         l_norm = self._normalize_l(l)

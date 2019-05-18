@@ -117,6 +117,30 @@ def imsave(path, img):
 
 
 def predict_color(model, img, input_size=(224, 224)):
+    """
+    Transform a (grayscale) image into a colorized RGB image using a trained
+    colorization model.
+
+    Args:
+        model (colorization.ColorizationModel):
+            Colorization model.
+        img (np.ndarray):
+            Image to be colorized, can be either RGB (i.e. of shape
+            `(h, w, 3)`) or grayscale (i.e. of shape `(h, w, 1)`). In the
+            former case the original colorization will be replaced with
+            one predicted by the network from a grayscale version of the
+            image.
+        input_size (tuple(int, int)):
+            Size to which `img` should be rescaled before passing it through
+            the network. This does not influence the size of the returned RGB
+            image which will always be equal to that of `img`. Do not explicitly
+            set this parameter unless you have a good reason to do so.
+
+    Returns:
+        An RGB image of the same size as the input image.
+
+    """
+
     img_resized = resize(img, input_size)
 
     if is_rgb(img):

@@ -41,7 +41,7 @@ def _log_progress(log_config, logger, queue):
 
 
 class ColorizationModel:
-    """ Top-level wrapper class implementing training and prediction.
+    """Wrapper class implementing network training and prediction.
 
     This is a wrapper class that composes a PyTorch network with a loss
     function and an optimizer and implements training, prediction,
@@ -61,8 +61,7 @@ class ColorizationModel:
                  lr_scheduler=None,
                  log_config=None,
                  logger=None):
-        """
-        Compose a model.
+        """Compose a model.
 
         Note:
             The model is not trainable unless both `loss` and `optimizer` are
@@ -73,7 +72,7 @@ class ColorizationModel:
             `logger` are not `None`.
 
         Args:
-            network (colorization.modules.ColorizationNetwork):
+            network (colorization.ColorizationNetwork):
                 Network instance.
             loss (torch.nn.Module, optional):
                 Training loss function, if this is set to `None`, the model is
@@ -82,7 +81,7 @@ class ColorizationModel:
                 Partially applied training optimizer, parameter argument is
                 supplied by this constructor, if this is set to `None`, the
                 model is not trainable.
-            optimizer (torch.optim.lr_scheduler._LRScheduler, optional):
+            lr_scheduler (torch.optim.lr_scheduler._LRScheduler, optional):
                 Learning rate scheduler.
             log_config (dict, optional):
                 Python `logging` configuration dictionary, if this is set to
@@ -240,14 +239,14 @@ class ColorizationModel:
             img (torch.Tensor):
                 A tensor of shape `(n, 1, h, w)` where `n` is the size of the
                 batch to be predicted and `h` and `w` are image dimensions. The
-                image should be the lightness channel of an image converted into
-                the Lab color space.
+                images should be Lab lightness channels.
 
         Returns:
             A tensor of shape `(n, 1, h, w)` containing the predicted ab
             channels.
 
         """
+
         # switch to evaluation mode
         self.network.eval()
 
@@ -261,7 +260,7 @@ class ColorizationModel:
         return img_pred
 
     def save_checkpoint(self, path, save_optimizer=False):
-        """Save network weights to checkpoint.
+        """Save weights to checkpoint.
 
         Args:
             path (str):
@@ -270,6 +269,7 @@ class ColorizationModel:
                 If `True`, save optimizer state as well.
 
         """
+
         state = {
             'network': self.network.base_network.state_dict(),
         }
@@ -280,7 +280,7 @@ class ColorizationModel:
         torch.save(state, path)
 
     def load_checkpoint(self, path, load_optimizer=False):
-        """Initialize model weights from checkpoint.
+        """Initialize weights from checkpoint.
 
         Args:
             path (str):
@@ -289,6 +289,7 @@ class ColorizationModel:
                 If `True`, load optimizer state as well.
 
         """
+
         state = torch.load(path, map_location=(lambda storage, _: storage))
 
         self.network.base_network.load_state_dict(state['network'])
@@ -297,21 +298,15 @@ class ColorizationModel:
             self.optimizer.load_state_dict(state['optimizer'])
 
     @classmethod
-    def find_latest_checkpoint(cls, checkpoint_dir, skip_final=False):
+    def find_latest_checkpoint(cls, checkpoint_dir):
         """Find the most up to date checkpoint file in a checkpoint directory.
 
         Args:
             checkpoint_dir (str):
                 Directory in which to search for checkpoints, must exist.
-            skip_final (bool):
-                If `True` don't consider the checkpoint created after the final
-                training iteration. This is sensible if the returned checkpoint
-                will be be used to resume training since training can only be
-                resumed from checkpoints created at the end of an epoch.
 
         Returns:
-            The file path to the latest checkpoint as well as the epoch at which
-            that checkpoint was created in a tuple.
+            The file path to the latest checkpoint.
 
         """
 
@@ -325,21 +320,11 @@ class ColorizationModel:
         all_checkpoints = sorted(glob(checkpoint_template))
 
         # find lastest checkpoint
-        while True:
-            if not all_checkpoints:
-                err = "failed to resume training: no previous checkpoints"
-                raise ValueError(err)
+        if not all_checkpoints:
+            err = "failed to resume training: no previous checkpoints"
+            raise ValueError(err)
 
-            checkpoint_path = all_checkpoints[-1]
-
-            is_final = checkpoint_path.find('final') != -1
-
-            if is_final and skip_final:
-                all_checkpoints.pop()
-            else:
-                break
-
-        return checkpoint_path
+        return all_checkpoints[-1]
 
     def _checkpoint_training(self, checkpoint_dir, checkpoint_iterations):
         path = self._checkpoint_path(checkpoint_dir, checkpoint_iterations)
