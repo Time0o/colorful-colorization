@@ -2,9 +2,7 @@
 
 This is a from-scratch PyTorch implementation of "Colorful Image Colorization"
 [1] by Zhang et al. created for the _Deep Learning in Data Science_ course at
-KTH Stockholm. The distinguishing feature of this implementation is that it
-makes it possible to exchange the VGG style network described in the paper with
-a network based on the state of the art _DeepLabv3+_ [2] architecture.
+KTH Stockholm.
 
 The following sections describe in detail:
 * how to install the dependencies necessary to get started with this project
@@ -31,23 +29,15 @@ Caffe models. Run `resources/get_resources.sh` to download these automatically.
 **If you skip this step you will not be able to run the network at all, even if
 you provide your own weight initialization or want to train from scratch**.
 
-If you want to use DeepLabv3+ as a backend network you might also want to
-download pretrained weights for the Xception sub-network. You can find links to
-current ones
-[here](https://github.com/tensorflow/models/blob/master/research/deeplab/g3doc/model_zoo.md).
-Of these you should probably download
-[xception_65_imagenet](http://download.tensorflow.org/models/deeplabv3_xception_2018_01_04.tar.gz).
-
 You might also notice another shell script, `data/get_cval.sh`, that downloads
 several additional resources. However, this is mainly a remnant of the
 developement process and you can safely ignore it.
 
 In order to use the pretrained weights for prediction, you will have to convert
-them from Caffe/TensorFlow to PyTorch. We provide the convenience script
+them from Caffe to PyTorch. We provide the convenience script
 `scripts/convert_weights` for exactly this purpose. In order to use it you will
 have to install the `caffe` Python module (if you want to convert one of the
-Caffe models provided by R. Zhang) or `tensorflow` (if you want to convert a
-DeepLabv3+/Xception checkpoint).
+Caffe models provided by R. Zhang)
 
 For example, in order to convert the Caffe model trained with class rebalancing
 downloaded by `resources/get_resources.sh`, you can call the script like this:
@@ -78,10 +68,8 @@ directory `dir1` and subsequently run:
 ```
 
 The script will colorize all images in `dir1` on the GPU and place the results
-in `dir2` (with the same filenames). If your model checkpoint was not created
-from a VGG style network, you will need to explicitly specify `--base-network`.
-You can also choose an annealed mean temperature parameter other then the
-default 0.38 with `--annealed-mean-T`. .
+in `dir2` (with the same filenames). You can choose an annealed mean
+temperature parameter other then the default 0.38 with `--annealed-mean-T`. .
 
 ## Train the Network
 
@@ -182,11 +170,11 @@ first need to instantiate the network itself:
 ```python
 from colorization.modules.colorization_network import ColorizationNetwork
 
-network = ColorizationNetwork(base_network='vgg', annealed_mean_T=0.38, device='gpu')
+network = ColorizationNetwork(annealed_mean_T=0.38, device='gpu')
 ```
 
-The parameters should be self explanatory, use `device='cpu'` if you plan to
-run the network on the GPU.
+The parameters should be self explanatory (and are in this case optional), use
+`device='cpu'` if you plan to run the network on the GPU.
 
 You will then need to wrap the network in an instance of `ColorizationModel`
 which implements (among other things) checkpoint saving/loading:
@@ -206,7 +194,6 @@ In order to colorize a grayscale image you should then:
 * pass it through the model
 * reassemble the result
 
-
 All of this is already implemented in a convenience function:
 
 ```python
@@ -221,9 +208,3 @@ img_colorized = predict_color(img)
 [1] *Colorful Image Colorization*, Zhang, Richard and Isola, Phillip and Efros,
 Alexei A, in ECCV 2016
 ([website](https://richzhang.github.io/colorization/))
-
-[2] *Encoder-Decoder with Atrous Separable Convolution for Semantic Image
-Segmentation*, Liang-Chieh Chen and Yukun Zhu and George Papandreou and Florian
-Schroff and Hartwig Adam in ECCV 2018
-([arXiv](https://arxiv.org/abs/1802.02611),
-[GitHub](https://github.com/tensorflow/models/tree/master/research/deeplab))
