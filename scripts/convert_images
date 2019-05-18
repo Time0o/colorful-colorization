@@ -9,30 +9,34 @@ from shutil import copyfile
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor
+from torchvision import transforms
 
 sys.path.insert(1, os.path.join(sys.path[0], ('..')))
 
 from colorization.colorization_model import ColorizationModel
 from colorization.data.image_directory import ImageDirectory
-from colorization.data.transforms import RGBOrGrayToL
+from colorization.data.transforms import RGBOrGrayToL, ToNumpy
 from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
-from colorization.util.image import *
+from colorization.util.image import images_in_directory, imread, imsave, \
+                                    lab_to_rgb, resize, rgb_to_gray, \
+                                    rgb_to_lab, to_rgb, torch_to_numpy
 
 
 USAGE = \
-"""convert_images.py [-h|--help]
-                         --input-dir INPUT_DIR
-                         --output-dir OUTPUT_DIR
-                         [--force]
-                         [--color-source-dir COLOR_SOURCE_DIR]
-                         [--base-network NETWORK_ID]
-                         [--annealed-mean-T ANNEALED_MEAN_T]
-                         [--model-checkpoint MODEL_CHECKPOINT]
-                         [--gpu]
-                         [--verbose]
-                         {resize,no_color,random_color,predict_color}"""
+"""convert_images [-h|--help]
+                      --input-dir INPUT_DIR
+                      --output-dir OUTPUT_DIR
+                      [--force]
+                      [--resize-height RESIZE_HEIGHT]
+                      [--resize-width RESIZE_WIDTH]
+                      [--color-source-dir COLOR_SOURCE_DIR]
+                      [--base-network NETWORK_ID]
+                      [--annealed-mean-T ANNEALED_MEAN_T]
+                      [--model-checkpoint MODEL_CHECKPOINT]
+                      [--gpu]
+                      [--verbose]
+                      {resize,no_color,random_color,predict_color}"""
 
 
 def _random_color(img, color_source_images):
@@ -49,15 +53,34 @@ def _random_color(img, color_source_images):
 
 
 def _predict_color(args):
-    # create dataloader
+    # create dataloaders
     dataset = ImageDirectory(
         args.input_dir,
         return_labels=False,
         return_filenames=True,
-        transform=Compose([RGBOrGrayToL(), ToTensor()])
+        transform=transforms.Compose([
+            RGBOrGrayToL(),
+            transforms.ToTensor()
+        ])
     )
 
-    dataloader = DataLoader(dataset, pin_memory=args.gpu)
+    dataloader = DataLoader(dataset)
+
+    resize_height = args.resize_height or 224
+    resize_width = args.resize_width or 224
+
+    dataset_resized = ImageDirectory(
+        args.input_dir,
+        transform=transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((resize_height, resize_width)),
+            ToNumpy(),
+            RGBOrGrayToL(),
+            transforms.ToTensor()
+        ])
+    )
+
+    dataloader_resized = DataLoader(dataset_resized, pin_memory=args.gpu)
 
     # create network
     device = 'cuda' if args.gpu else 'cpu'
@@ -74,13 +97,14 @@ def _predict_color(args):
 
     # process images
     with torch.no_grad():
-        for l_torch, filename in dataloader:
+        for (l, filename), l_resized in zip(dataloader, dataloader_resized):
             if args.verbose:
                 print("processing '{}'".format(filename[0]))
 
-            l = torch_to_numpy(l_torch)
-            l_torch = l_torch.to(device)
-            ab = resize(torch_to_numpy(model.predict(l_torch)), l.shape[:2])
+            l_pred = model.predict(l_resized.to(device))
+
+            l = torch_to_numpy(l)
+            ab = resize(torch_to_numpy(l_pred), l.shape[:2])
 
             out_img = lab_to_rgb(np.dstack((l, ab)))
             out_path = os.path.join(args.output_dir, filename[0])
@@ -110,13 +134,16 @@ if __name__ == '__main__':
 
     parser.add_argument('--resize-height',
                         type=int,
-                        help=str("only meaningful in conjunction with "
-                                 "'resize'"))
+                        help=str("if mode is 'resize', resize images to this "
+                                 "height, if mode is 'predict_color', resize "
+                                 "network inputs to this height (output images "
+                                 "will still have the same dimensions as input "
+                                 "images), in the latter case this is 224 by "
+                                 "default"))
 
     parser.add_argument('--resize-width',
                         type=int,
-                        help=str("only meaningful in conjunction with "
-                                 "'resize'"))
+                        help="see --resize-height")
 
     parser.add_argument('--color-source-dir',
                         help=str("only meaningful in conjunction with "

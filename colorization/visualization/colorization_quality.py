@@ -83,7 +83,8 @@ def good_vs_bad_demo(images_good_file,
         subplot_divider(fig, axes, 'horizontal', len(image_paths_good) - 1)
 
 
-def amt_demo(accuracies_file,
+def amt_demo(participants,
+             accuracies_file,
              ground_truth_dir,
              predict_color_dir,
              rows=4,
@@ -96,7 +97,7 @@ def amt_demo(accuracies_file,
     with open(accuracies_file, 'r') as f:
         for line in f:
             path, res = line.split()
-            results[path] = float(res)
+            results[path] = 1 - float(res)
 
     assert len(results) >= rows * (columns_worst + columns_best)
 
@@ -105,7 +106,8 @@ def amt_demo(accuracies_file,
     ]
 
     # plot results
-    fig, axes = subplots(rows, (columns_best + columns_worst) * 2)
+    fig, axes = subplots(
+        rows, (columns_best + columns_worst) * 3 - 1, use_gridspec=True)
 
     images_show = list(reversed(
         images_sorted[:(rows * columns_worst)] + \
@@ -119,29 +121,37 @@ def amt_demo(accuracies_file,
             path_gt = os.path.join(ground_truth_dir, images_show[n])
             path_pc = os.path.join(predict_color_dir, images_show[n])
 
-            axes[r, 2 * c].imshow(imread(path_gt))
-            axes[r, 2 * c + 1].imshow(imread(path_pc))
+            ax_gt = axes[r, 3 * c]
+            ax_pc = axes[r, 3 * c + 1]
 
-            axes[r, 2 * c].set_ylabel("{}%".format(round(100 * results[path])))
+            ax_gt.imshow(imread(path_gt))
+            ax_pc.imshow(imread(path_pc))
+
+            wrong = round(participants * results[images_show[n]])
+
+            ax_gt.set_ylabel("{}/{}".format(wrong, participants))
+            ax_gt.yaxis.labelpad = 0
 
     # plot divider
-    plt.tight_layout()
+    subplot_divider(
+        fig, axes, 'vertical', 3 * columns_best - 2, 3 * columns_best)
 
-    subplot_divider(fig, axes, 'vertical', 2 * columns_best - 1)
+    # format plot
+    for ax in axes[0, 0::3]:
+        ax.set_title("Ground\nTruth")
 
-    # add titles
-    for i, ax in enumerate(axes[0, :]):
-        if i % 2 == 0:
-            ax.set_title("Ground Truth")
-        else:
-            ax.set_title("Ours")
+    for ax in axes[0, 1::3]:
+        ax.set_title("Ours")
 
-    fmt = '{}' + ' ' * 140 + '{}'
+    for ax in axes[:, 2::3].flatten():
+        ax.axis('off')
+
+    fmt = '{}' + 5 * '\\ ' + '{}'
 
     suptitle = fmt.format(r'Fooled more often $\longleftarrow$',
                           r'$\longrightarrow$ Fooled less often')
 
-    fig.suptitle(suptitle, y=0)
+    fig.suptitle(suptitle, y=-0.1)
 
 
 def raw_accuracy_demo(ground_truth_dir,

@@ -11,6 +11,9 @@ from .io import get_filenames_by_label, \
 from .plot import subplots
 
 
+_SCATTER_S = 10
+
+
 def _classification_performance(image_dir):
     labels = read_labels(image_dir)
     classified = read_classification(image_dir)
@@ -46,7 +49,7 @@ def _confusion_matrix(image_dir):
             for filename in filenames:
                 if label in classified[filename]:
                     correct += 1
- 
+
             c[ground_truth_label, label] = correct / len(filenames)
 
     return c
@@ -55,38 +58,38 @@ def _confusion_matrix(image_dir):
 def gray_vs_recolorized_performance(no_color_dir,
                                     predict_color_dir,
                                     n_top=50,
-                                    n_bottom=50):
+                                    n_bottom=50,
+                                    ax=None):
 
     a_no_color = _classification_performance(no_color_dir)
     a_predict_color = _classification_performance(predict_color_dir)
-    
-    a_rel_sorted = np.argsort(a_predict_color - a_no_color)
-    
-    # plot results
-    _, ax = subplots(no_ticks=False)
 
-    ax.scatter(a_no_color, a_predict_color, color='k')
-    
+    a_rel_sorted = np.argsort(a_predict_color - a_no_color)
+
+    # plot results
+    if ax is None:
+        _, ax = subplots(no_ticks=False)
+
+    ax.scatter(a_no_color, a_predict_color, color='k', s=_SCATTER_S)
+
     if n_top > 0:
         ax.scatter(a_no_color[a_rel_sorted[-n_top:]],
                    a_predict_color[a_rel_sorted[-n_top:]],
                    facecolor='b',
-                   edgecolor='k',
-                   s=100,
+                   s=_SCATTER_S,
                    label="Top {}".format(n_top))
 
     if n_bottom > 0:
         ax.scatter(a_no_color[a_rel_sorted[:n_bottom]],
                    a_predict_color[a_rel_sorted[:n_bottom]],
                    facecolor='r',
-                   edgecolor='k',
-                   s=100,
+                   s=_SCATTER_S,
                    label="Bottom {}".format(n_bottom))
 
     ax.plot([0, 1], [0, 1], color='k')
-    
+
     ax.set_title("VGG Classification Performance")
-    ax.set_xlabel("Grayscale")
+    ax.set_xlabel("Greyscale")
     ax.set_ylabel("Recolored")
 
     ax.set_xlim([0, 1])
@@ -95,10 +98,12 @@ def gray_vs_recolorized_performance(no_color_dir,
     if n_top > 0 or n_bottom > 0:
         ax.legend()
 
-    ax.grid()
 
+def top5_confusion_rates(ground_truth_dir,
+                         predict_color_dir,
+                         n_top=100,
+                         ax=None):
 
-def top5_confusion_rates(ground_truth_dir, predict_color_dir, n_top=100):
     c_ground_truth = _confusion_matrix(ground_truth_dir)
     c_predict_color = _confusion_matrix(predict_color_dir)
 
@@ -106,40 +111,48 @@ def top5_confusion_rates(ground_truth_dir, predict_color_dir, n_top=100):
     c_ground_truth = c_ground_truth[mask].flatten()
     c_predict_color = c_predict_color[mask].flatten()
 
+    i = np.where((c_ground_truth == 0) & (c_predict_color == 0))
+    c_ground_truth = np.delete(c_ground_truth, i)
+    c_predict_color = np.delete(c_predict_color, i)
+
     a_rel_sorted = np.argsort(c_predict_color - c_ground_truth)
 
     # plot results
-    _, ax = subplots(no_ticks=False)
+    if ax is None:
+        _, ax = subplots(no_ticks=False)
 
-    ax.scatter(c_ground_truth, c_predict_color, color='k')
+    ax.scatter(c_ground_truth, c_predict_color, color='k', s=_SCATTER_S)
 
     ax.scatter(c_ground_truth[a_rel_sorted[-n_top:]],
                c_predict_color[a_rel_sorted[-n_top:]],
                facecolor='r',
-               edgecolor='k',
-               s=100,
+               s=_SCATTER_S,
                label="Top {}".format(n_top))
 
     ax.plot([0, 1], [0, 1], color='k')
 
-    ax.set_title("Confusion Rates Before & After Recoloring")
-    ax.set_xlabel("Grayscale")
+    ax.set_title("Confusion Rates")
+    ax.set_xlabel("Greyscale")
     ax.set_ylabel("Recolored")
 
     ax.set_xlim([0, 1])
     ax.set_ylim([0, 1])
 
     ax.legend()
-    ax.grid()
 
-    
-def common_confusions(ground_truth_dir, predict_color_dir, which, n_per_class=5):
+
+def common_confusions(ground_truth_dir,
+                      predict_color_dir,
+                      which,
+                      n_per_class=5,
+                      axes=None):
+
     c_ground_truth = _confusion_matrix(ground_truth_dir)
     c_predict_color = _confusion_matrix(predict_color_dir)
 
     a = c_predict_color - c_ground_truth
     np.fill_diagonal(a, -np.inf)
-    
+
     b = np.flip(np.argsort(a.ravel()))
     c_top, d_top = np.unravel_index(b, a.shape)
 
@@ -151,38 +164,38 @@ def common_confusions(ground_truth_dir, predict_color_dir, which, n_per_class=5)
 
     imagenet_plaintext_labels = get_imagenet_plaintext_labels()
 
-    for i in which:
-        demo_images = []
-    
-        for filename in filenames_by_label[c_top[i]]:
-            confused_gt = d_top[i] in classified_gt[filename]
-            confused_pc = d_top[i] in classified_pc[filename]
-            
-            if not confused_gt and confused_pc:
-                demo_images.append(filename)
+    # determine "confused" images
+    demo_images = []
 
-                if len(demo_images) == n_per_class:
-                    break
+    for filename in filenames_by_label[c_top[which]]:
+        confused_gt = d_top[which] in classified_gt[filename]
+        confused_pc = d_top[which] in classified_pc[filename]
 
+        if not confused_gt and confused_pc:
+            demo_images.append(filename)
+
+            if len(demo_images) == n_per_class:
+                break
+
+    # plot results
+    if axes is None:
         _, axes = subplots(2, n_per_class, use_gridspec=True, grid_spacing=0)
 
-        for j, img in enumerate(demo_images):
-            img_gt = imread(os.path.join(ground_truth_dir, img))
-            img_pc = imread(os.path.join(predict_color_dir, img))
+    for j, img in enumerate(demo_images):
+        img_gt = imread(os.path.join(ground_truth_dir, img))
+        img_pc = imread(os.path.join(predict_color_dir, img))
 
-            axes[0, j].imshow(img_gt)
-            axes[1, j].imshow(img_pc)
+        axes[0, j].imshow(img_gt)
+        axes[1, j].imshow(img_pc)
 
-        # add plot text
-        FONTSIZE = 15
+    # add plot text
+    FONTSIZE = 15
 
-        c_name = imagenet_plaintext_labels[c_top[i]]
-        d_name = imagenet_plaintext_labels[d_top[i]]
+    c_name = imagenet_plaintext_labels[c_top[which]]
+    d_name = imagenet_plaintext_labels[d_top[which]]
 
-        fmt = r"{} $\longrightarrow$ {}"
-        plt.suptitle(fmt.format(c_name, d_name), fontsize=FONTSIZE)
+    fmt = r"{} $\longrightarrow$ {}"
+    plt.suptitle(fmt.format(c_name, d_name), fontsize=FONTSIZE)
 
-        axes[0, 0].set_ylabel("Ground Truth", fontsize=FONTSIZE)
-        axes[1, 0].set_ylabel("Recolored", fontsize=FONTSIZE)
-
-        plt.show()
+    axes[0, 0].set_ylabel("Ground\nTruth", fontsize=FONTSIZE)
+    axes[1, 0].set_ylabel("Recolored", fontsize=FONTSIZE)
