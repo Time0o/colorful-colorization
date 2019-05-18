@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="preview.png">
+</p>
+
 # Colorful Image Colorization PyTorch
 
 This is a from-scratch PyTorch implementation of "Colorful Image Colorization"
