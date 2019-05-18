@@ -168,7 +168,7 @@ Colorizing images programmatically using our implementation is very simple. You
 first need to instantiate the network itself:
 
 ```python
-from colorization.modules.colorization_network import ColorizationNetwork
+from colorization import ColorizationNetwork
 
 network = ColorizationNetwork(annealed_mean_T=0.38, device='gpu')
 ```
@@ -180,7 +180,7 @@ You will then need to wrap the network in an instance of `ColorizationModel`
 which implements (among other things) checkpoint saving/loading:
 
 ```python
-from colorization.colorization_model import ColorizationModel
+from colorization import ColorizationModel
 
 model = ColorizationModel(network)
 model.load_checkpoint('YOUR_CHECKPOINT_DIR/checkpoint_final.tar')
@@ -197,7 +197,8 @@ In order to colorize a grayscale image you should then:
 All of this is already implemented in a convenience function:
 
 ```python
-from colorization.util.image import imread, predict_color
+from colorization predict_color
+from skimage.io import imread
 
 img = imread('YOUR_IMAGE.jpg')
 img_colorized = predict_color(img)
