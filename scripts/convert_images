@@ -71,6 +71,7 @@ def _predict_color(args):
 
     dataset_resized = ImageDirectory(
         args.input_dir,
+        return_labels=False,
         transform=transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((resize_height, resize_width)),
