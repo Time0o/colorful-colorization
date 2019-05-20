@@ -18,4 +18,32 @@
   \titlepage
 \end{frame}
 
+\begin{frame}{Training}
+  \begin{figure}
+    \includegraphics[width=\textwidth]{resources/training.pdf}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Training}
+  \begin{itemize}
+    \item Adam optimizer
+       \begin{itemize}
+         \item $\beta_1 = .9$, $\beta_2 = .99$
+         \item weight decay = $10^-3$
+         \item $\eta = 3.16 \time 10^{-5}$ (constant)
+         \item batch size = 40
+       \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Training}
+  \begin{itemize}
+    \item $\approx 20$ hours of training on NVIDIA Tesla V100
+  \end{itemize}
+
+  \begin{figure}
+    \includegraphics{resources/learning_curve.pdf}
+  \end{figure}
+\end{frame}
+
 \end{document}
