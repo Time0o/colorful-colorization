@@ -2,20 +2,21 @@ TEX_DIR=tex
 RESOURCE_DIR=resources
 OUT_DIR=out
 
-TARGET=report
-
 define run_pdflatex
 	pdflatex -halt-on-error -output-directory $(OUT_DIR) $(1)
 endef
 
-_TEX_ALL:=$(wildcard $(TEX_DIR)/*)
-TEX_NON_TARGET:=$(filter-out $(TEX_DIR)/$(TARGET).pdf, $(_TEX_ALL))
-
 RESOURCES:=$(wildcard $(RESOURCE_DIR)/*)
 
-$(OUT_DIR)/$(TARGET).pdf: $(TEX_DIR)/$(TARGET).tex $(TEX_NON_TARGET) $(RESOURCES) $(TARGET).bib
+all: $(OUT_DIR)/report.pdf $(OUT_DIR)/slides.pdf
+
+$(OUT_DIR)/report.pdf: $(TEX_DIR)/report.tex report.bib $(RESOURCES)
 	$(call run_pdflatex, $<)
 	bibtex $(patsubst $(TEX_DIR)/%.tex, $(OUT_DIR)/%.aux, $<)
+	$(call run_pdflatex, $<)
+	$(call run_pdflatex, $<)
+
+$(OUT_DIR)/slides.pdf: $(TEX_DIR)/slides.tex $(RESOURCES)
 	$(call run_pdflatex, $<)
 	$(call run_pdflatex, $<)
 
