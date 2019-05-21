@@ -1,6 +1,8 @@
 \documentclass{beamer}
 
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
 
 % page numbering
 \setbeamertemplate{footline}[frame number]{}
@@ -19,9 +21,9 @@
 \end{frame}
 
 \begin{frame}{Training}
-  \begin{figure}
+  \begin{center}
     \includegraphics[width=\textwidth]{resources/training.pdf}
-  \end{figure}
+  \end{center}
 \end{frame}
 
 \begin{frame}{Training}
@@ -41,9 +43,74 @@
     \item $\approx 20$ hours of training on NVIDIA Tesla V100
   \end{itemize}
 
-  \begin{figure}
-    \includegraphics{resources/learning_curve.pdf}
-  \end{figure}
+  \begin{center}
+    \includegraphics[width=.6\textwidth]{resources/learning_curve.pdf}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Examples}
+  \begin{center}
+    \includegraphics[height=.9\textheight]{resources/good_vs_bad_slides.pdf}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Perceptual Realism Study}
+  \begin{center}
+    \includegraphics[width=\textwidth]{resources/amt_results_slides.pdf}
+  \end{center}
+
+  \begin{itemize}
+    \item $50$ randomly chosen validation set images
+    \item $10$ participants
+    \item fooled on average $18.78\%$ of the time
+    \item $\rightarrow$ photorealistic results only for ``easy'' images
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Colourization as Preprocessing}
+  \begin{center}
+    \begin{tabular}{cc}
+      \scalebox{0.8}{
+        \begin{tabular}{ll}
+          \toprule
+          Method        & VGG-16 Top-5 Acc. \\
+          \midrule
+          Ground truth  & 92.1 \\
+          Grayscale     & 46.4 \\
+          Random colour & 17.4 \\
+          \midrule
+          Zhang et al.  & 67.7 \\
+          Ours          & 81.0 \\
+          \bottomrule
+        \end{tabular}
+      } & $\vcenter{\hbox{\includegraphics[width=.5\textwidth]{%
+        resources/vgg_classification_performance.pdf}}}$
+    \end{tabular}
+  \end{center}
+
+  \medskip
+
+  \begin{itemize}
+    \item top-5 classification accuracy for 1000 validation set images
+    \item $\rightarrow$ dramatically improved by colourization!
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Colourization as Preprocessing}
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \includegraphics[width=\textwidth]{resources/confusion_rates.pdf}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      \includegraphics[width=\textwidth]{resources/common_confusions.pdf}
+    \end{column}
+  \end{columns}
+
+  \medskip
+
+  \begin{itemize}
+    \item colourization amplifies certain confusion cases
+  \end{itemize}
 \end{frame}
 
 \end{document}
