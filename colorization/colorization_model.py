@@ -190,8 +190,7 @@ class ColorizationModel:
         while not done:
             for img in dataloader:
                 # move data to device
-                if dataloader.pin_memory:
-                    img = img.to(self.device, non_blocking=True)
+                img = img.to(self.device, non_blocking=dataloader.pin_memory)
 
                 # perform parameter update
                 self.optimizer.zero_grad()
