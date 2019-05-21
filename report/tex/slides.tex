@@ -3,6 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{booktabs}
+\usepackage{bm}
 
 % page numbering
 \setbeamertemplate{footline}[frame number]{}
@@ -26,7 +27,7 @@
 % --- INTRODUCTION -------------------------------------------------------------
 
 \begin{frame}{Introduction (I)}
-  Problem statement:
+  \textbf{Problem statement:}
     \begin{itemize}
       \item Infer colours given a grayscale image
       \item Ill-posed problem due to inherent multimodality \\
@@ -53,7 +54,7 @@
 \end{frame}
 
 \begin{frame}{Introduction (II)}
-  Applications:
+  \textbf{Applications:}
     \begin{itemize}
         \item Colouring historical images.
         \item Preprocessing step in b/w image classification.
@@ -63,7 +64,7 @@
 % --- RELATED WORK -------------------------------------------------------------
 
 \begin{frame}{Related work (I)}
-  Early approaches to the problem:
+  \textbf{Early approaches to the problem:}
 
     \medskip
 
@@ -89,7 +90,7 @@
 \end{frame}
 
 \begin{frame}{Related work (II)}
-  Modern approaches:
+  \textbf{Modern approaches:}
     \begin{itemize}
       \item Leverage large-scale data: deep learning approaches with different
             architectures and cost functions (Larsson et al. 2016,
@@ -135,7 +136,7 @@
 \end{frame}
 
 \begin{frame}{Data (II)}
-  Dataset:
+  \textbf{Dataset:}
     \begin{itemize}
       \item Subset of ImageNet (42.566 images)
       \item Semantically related categories (mostly fruits and vegetables) \\
@@ -152,6 +153,118 @@
     \includegraphics[width=.23\linewidth]{resources/veg4.jpg}
     \caption{Examples of images from our training set.}
   \end{figure}
+\end{frame}
+
+% --- METHODS ------------------------------------------------------------------
+
+\begin{frame}{Methods (I): Transformation}
+  \textbf{Input:}
+    \begin{itemize}
+       \item Luminance channel $L$
+    \end{itemize}
+
+  \medskip
+
+  \textbf{Target:}
+    \begin{itemize}
+      \item Discrete, in-gamut $ab$ output space with $Q = 313$ bins
+    \end{itemize}
+
+  \medskip
+
+  \begin{center}
+    \includegraphics[width=.4\linewidth]{resources/gamut.jpg}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Methods (II): Loss Function}
+  \begin{itemize}
+    \item Raw output: probability distribution $Z \in [0, 1]^{H \times W \times Q}$
+    \item Obtain $\hat{Z}$ from ground truth via \textbf{soft encoding}
+  \end{itemize}
+
+  \begin{equation}
+    L(Z, \hat{Z}) = -\sum_{w,h} v(Z_{w,h}) \sum_q Z_{w,h,q} \cdot log(\hat{Z}_{w,h,q})
+  \end{equation}
+
+  \begin{itemize}
+    \item Use \textbf{class rebalancing} to achieve plausible colourizations
+  \end{itemize}
+
+  \begin{equation}
+    v(Z_{w,h}) \propto \left((1 - \lambda) \tilde{\bm{p}} + \frac{\lambda}{Q} \right)^{-1}
+  \end{equation}
+
+  \begin{itemize}
+    \item $\tilde{\bm{p}}$ is prior distribution (from ImageNet training set)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Methods (III): From Colour Probabilities to Point Estimates}
+  \begin{itemize}
+    \item Decode $Z$ to $ab \in [-110,110]^{H \times W \times 2}$ via \textbf{Annealed Mean}
+  \end{itemize}
+
+  \begin{equation}
+    H(Z_{h,w}) = E[f(Z_{h,w})] \qquad f(z) = \frac{exp(log(z)/T)}{\sum_q exp(log(z)/T)}
+  \end{equation}
+
+  \begin{itemize}
+    \item Can adjust \textbf{Temperature} parameter $T \in [1, 0)$ \\
+          $\rightarrow$ lower $T$: higher vibrancy \\
+          $\rightarrow$ higher $T$: higher spatial consistency
+  \end{itemize}
+
+  \medskip
+
+  \includegraphics[width=\linewidth]{resources/annealed_mean.pdf}
+\end{frame}
+
+\begin{frame}{Methods (IV): Network Architecture}
+  \textbf{Input data:}
+    \begin{itemize}
+       \item Luminance channel $L$
+    \end{itemize}
+
+  \medskip
+
+  \includegraphics[width=\linewidth]{resources/network1.jpg}
+\end{frame}
+
+\begin{frame}{Methods (IV): Network Architecture}
+  \textbf{Feature extraction:}
+    \begin{itemize}
+      \item VGG like
+      \item (atrous) convolution, deconvolution and batchnorm layers
+      \item ReLU activations
+      \item Kernel size $3 \times 3$
+    \end{itemize}
+
+  \medskip
+
+  \includegraphics[width=\linewidth]{resources/network2.jpg}
+\end{frame}
+
+\begin{frame}{Methods (IV): Network Architecture}
+  \textbf{Raw output:}
+    \begin{itemize}
+      \item Probability distribution $Z \in [0, 1]^{H \times W \times Q}$
+    \end{itemize}
+
+  \medskip
+
+  \includegraphics[width=\linewidth]{resources/network3.jpg}
+\end{frame}
+
+\begin{frame}{Methods (IV): Network Architecture}
+  \textbf{Annealed mean:}
+    \begin{itemize}
+      \item $Z \in [0, 1]^{H \times W \times Q} \rightarrow ab \in [-110,110]^{H \times W \times 2}$
+    \end{itemize}
+
+  \medskip
+
+  \includegraphics[width=\linewidth]{resources/network4.jpg}
 \end{frame}
 
 % --- EXPERIMENTS --------------------------------------------------------------
