@@ -3,6 +3,7 @@
 import argparse
 import os
 import random
+import subprocess
 import sys
 from shutil import copyfile
 
@@ -31,6 +32,7 @@ USAGE = \
                       [--resize-height RESIZE_HEIGHT]
                       [--resize-width RESIZE_WIDTH]
                       [--color-source-dir COLOR_SOURCE_DIR]
+                      [--method METHOD]
                       [--base-network NETWORK_ID]
                       [--annealed-mean-T ANNEALED_MEAN_T]
                       [--model-checkpoint MODEL_CHECKPOINT]
@@ -52,7 +54,7 @@ def _random_color(img, color_source_images):
     return lab_to_rgb(np.dstack((l, ab)))
 
 
-def _predict_color(args):
+def _predict_color_zhang(args):
     # create dataloaders
     dataset = ImageDirectory(
         args.input_dir,
@@ -152,6 +154,12 @@ if __name__ == '__main__':
                                  "from randomly chosen images in this "
                                  "directory "))
 
+    parser.add_argument('--method',
+                        choices=['zhang', 'iizuka'],
+                        default='zhang',
+                        help=str("only meaningful in conjunction with "
+                                 "'predict_color'"))
+
     parser.add_argument('--base-network',
                         choices=['vgg', 'deeplab'],
                         default='vgg',
@@ -202,26 +210,48 @@ if __name__ == '__main__':
         os.mkdir(args.output_dir)
 
     # convert images
-    if args.mode == 'predict_color':
-        _predict_color(args)
+    if args.mode == 'predict_color' and args.method == 'zhang':
+        _predict_color_zhang(args)
     else:
-        if args.mode == 'resize':
+        input_dir = os.path.abspath(args.input_dir)
+        output_dir = os.path.abspath(args.output_dir)
+
+        if args.mode == 'predict_color' and args.method == 'iizuka':
+            os.chdir(os.path.dirname(args.model_checkpoint))
+
+            def transform(in_path, out_path):
+                cmd = "th colorize.lua {} {}"
+                subprocess.run(cmd.format(in_path, out_path),
+                               shell=True,
+                               check=True)
+
+        elif args.mode == 'resize':
             h, w = args.resize_height, args.resize_width
-            transform = lambda img: resize(img, (h, w))
+
+            def transform(in_path, out_path):
+                img = to_rgb(imread(in_path))
+                imsave(out_path, resize(img, (h, w)))
+
         elif args.mode == 'no_color':
-            transform = lambda img: rgb_to_gray(img)
+            def transform(in_path, out_path):
+                img = to_rgb(imread(in_path))
+                imsave(out_path, rgb_to_gray(img))
+
         elif args.mode == 'random_color':
             color_source_images = images_in_directory(args.color_source_dir)
-            transform = lambda img: _random_color(img, color_source_images)
 
-        for filename in images_in_directory(args.input_dir, exclude_root=True):
+            def transform(in_path, out_path):
+                img = to_rgb(imread(in_path))
+                imsave(out_path, _random_color(img, color_source_images))
+
+        for filename in images_in_directory(input_dir, exclude_root=True):
             if args.verbose:
                 print("processing '{}'".format(filename))
 
-            in_path = os.path.join(args.input_dir, filename)
-            out_path = os.path.join(args.output_dir, filename)
+            in_path = os.path.join(input_dir, filename)
+            out_path = os.path.join(output_dir, filename)
 
-            imsave(out_path, transform(to_rgb(imread(in_path))))
+            transform(in_path, out_path)
 
     # copy labels
     label_file = os.path.join(args.input_dir, ImageDirectory.LABEL_FILENAME)
