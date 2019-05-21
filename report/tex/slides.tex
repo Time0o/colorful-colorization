@@ -101,6 +101,59 @@
     \end{itemize}
 \end{frame}
 
+% --- DATA ---------------------------------------------------------------------
+
+\begin{frame}{Data (I)}
+  \begin{itemize}
+    \item Analyze images in the L*a*b* color space \\
+          $\rightarrow$ Use L channel as input \\
+          $\rightarrow$ Use a and b channel as supervisory signales
+    \item Resize images to 256x256 px
+    \item Randomly crop images to 176x176 px during training
+  \end{itemize}
+
+  \medskip
+
+  \begin{figure}[!htb]
+    \minipage{0.24\textwidth}
+      \includegraphics[width=\linewidth]{resources/pumpkin.jpg}
+      \caption{Original}
+    \endminipage\hfill
+    \minipage{0.24\textwidth}
+      \includegraphics[width=\linewidth]{resources/pumpkin_bw.jpg}
+      \caption{L channel}
+    \endminipage\hfill
+    \minipage{0.24\textwidth}
+      \includegraphics[width=\linewidth]{resources/pumpkin_a.jpg}
+      \caption{a channel}
+    \endminipage\hfill
+    \minipage{0.24\textwidth}
+      \includegraphics[width=\linewidth]{resources/pumpkin_b.jpg}
+      \caption{b channel}
+    \endminipage
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Data (II)}
+  Dataset:
+    \begin{itemize}
+      \item Subset of ImageNet (42.566 images)
+      \item Semantically related categories (mostly fruits and vegetables) \\
+            $\rightarrow$ Make training feasible given computational resources \\
+            $\rightarrow$ Vibrant colors: easy to inspect quality of the results
+    \end{itemize}
+
+  \medskip
+
+  \begin{figure}
+    \includegraphics[width=.23\linewidth]{resources/veg1.jpg}\hfill
+    \includegraphics[width=.23\linewidth]{resources/veg2.jpg}\hfill
+    \includegraphics[width=.23\linewidth]{resources/veg3.jpg}\hfill
+    \includegraphics[width=.23\linewidth]{resources/veg4.jpg}
+    \caption{Examples of images from our training set.}
+  \end{figure}
+\end{frame}
+
 % --- EXPERIMENTS --------------------------------------------------------------
 
 \begin{frame}{Training}
