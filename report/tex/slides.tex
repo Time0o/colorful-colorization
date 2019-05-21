@@ -55,8 +55,49 @@
 \begin{frame}{Introduction (II)}
   Applications:
     \begin{itemize}
-        \item Coloring historical images.
+        \item Colouring historical images.
         \item Preprocessing step in b/w image classification.
+    \end{itemize}
+\end{frame}
+
+% --- RELATED WORK -------------------------------------------------------------
+
+\begin{frame}{Related work (I)}
+  Early approaches to the problem:
+
+    \medskip
+
+    \begin{itemize}
+      \item Synthetize colours from reference pictures (Welsh et al., 2002)
+
+      \begin{figure}[!htb]
+        \minipage{0.50\textwidth}
+          \includegraphics[width=\linewidth]{resources/welsh.jpg}
+        \endminipage
+      \end{figure}
+
+      \medskip
+
+      \item Colourization as an optimization problem (Levin et al., 2004)
+
+      \begin{figure}[!htb]
+        \minipage{0.50\textwidth}
+          \includegraphics[width=\linewidth]{resources/levin.jpg}
+        \endminipage
+      \end{figure}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Related work (II)}
+  Modern approaches:
+    \begin{itemize}
+      \item Leverage large-scale data: deep learning approaches with different
+            architectures and cost functions (Larsson et al. 2016,
+            Iizuka et al. 2016, \textbf{Zhang et al. 2016})
+      \item Use Generative Adversarial Network to automatically learn the cost
+            function (Nazeri et al. 2018)
+      \item Exemplar-based colourization with automatic reference retrieval
+            (He et al. 2018)
     \end{itemize}
 \end{frame}
 
