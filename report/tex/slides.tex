@@ -4,6 +4,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{booktabs}
 \usepackage{bm}
+\usepackage{natbib}
 
 % page numbering
 \setbeamertemplate{footline}[frame number]{}
@@ -15,7 +16,10 @@
 % remove caption prefix
 \setbeamertemplate{caption}{\raggedright\insertcaption\par}
 
-\title{Reproducing \textit{Colorful Image Colorization}}
+% bibliography
+\setlength{\bibsep}{12pt plus 0.3ex}
+
+\title{Reproducing \textit{Colorful Image Colorization} \\ {[\cite{Zhang2016}]}}
 \author{Timo Nicolai \and Álvaro Orgaz Expósito \and Carolina Bianchi}
 
 \begin{document}
@@ -70,7 +74,7 @@
     \medskip
 
     \begin{itemize}
-      \item Synthesise colours from reference pictures (Welsh et al., 2002)
+      \item Synthesise colours from reference pictures [\cite{Welsh2002}]
 
       \begin{figure}[!htb]
         \minipage{0.50\textwidth}
@@ -80,7 +84,7 @@
 
       \medskip
 
-      \item Colourization as an optimization problem (Levin et al., 2004)
+      \item Colourization as an optimization problem [\cite{Levin2004}]
 
       \begin{figure}[!htb]
         \minipage{0.50\textwidth}
@@ -94,12 +98,12 @@
   \textbf{Modern approaches:}
     \begin{itemize}
       \item Leverage large-scale data: deep learning approaches with different
-            architectures and cost functions (Larsson et al. 2016,
-            Iizuka et al. 2016, \textbf{Zhang et al. 2016})
+            architectures and cost functions [\cite{Larsson2016},
+            \cite{Iizuka2016}, \cite{Zhang2016}]
       \item Use Generative Adversarial Network to automatically learn the cost
-            function (Nazeri et al. 2018)
+            function [\cite{Nazeri2018}]
       \item Exemplar-based colourization with automatic reference retrieval
-            (He et al. 2018)
+            [\cite{He2018}]
     \end{itemize}
 \end{frame}
 
@@ -376,6 +380,21 @@
               separate networks
       \end{itemize}
   \end{itemize}
+\end{frame}
+
+% --- END ----------------------------------------------------------------------
+
+\begin{frame}
+  \begin{center}
+    \huge
+    Thank you for your attention!
+  \end{center}
+\end{frame}
+
+\begin{frame}[allowframebreaks,t]{References}
+  \small
+  \bibliographystyle{apalike}
+  \bibliography{slides}
 \end{frame}
 
 % --- LEARNING OUTCOMES --------------------------------------------------------

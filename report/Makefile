@@ -16,7 +16,9 @@ $(OUT_DIR)/report.pdf: $(TEX_DIR)/report.tex report.bib $(RESOURCES)
 	$(call run_pdflatex, $<)
 	$(call run_pdflatex, $<)
 
-$(OUT_DIR)/slides.pdf: $(TEX_DIR)/slides.tex $(RESOURCES)
+$(OUT_DIR)/slides.pdf: $(TEX_DIR)/slides.tex slides.bib $(RESOURCES)
+	$(call run_pdflatex, $<)
+	bibtex $(patsubst $(TEX_DIR)/%.tex, $(OUT_DIR)/%.aux, $<)
 	$(call run_pdflatex, $<)
 	$(call run_pdflatex, $<)
 
