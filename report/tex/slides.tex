@@ -11,6 +11,9 @@
 % remove navigation symbols
 \beamertemplatenavigationsymbolsempty
 
+% remove caption prefix
+\setbeamertemplate{caption}{\raggedright\insertcaption\par}
+
 \title{Reproducing \textit{Colorful Image Colorization}}
 \author{Timo Nicolai \and Álvaro Orgaz Expósito \and Carolina Bianchi}
 
@@ -19,6 +22,45 @@
 \begin{frame}[noframenumbering,plain]
   \titlepage
 \end{frame}
+
+% --- INTRODUCTION -------------------------------------------------------------
+
+\begin{frame}{Introduction (I)}
+  Problem statement:
+    \begin{itemize}
+      \item Infer colours given a grayscale image
+      \item Ill-posed problem due to inherent multimodality \\
+            $\rightarrow$ network should predict per-pixel colour distributions \\
+            $\rightarrow$ produce \textit{plausible} colourization
+    \end{itemize}
+
+  \medskip
+
+  \begin{figure}[!htb]
+    \minipage{0.28\textwidth}
+      \includegraphics[width=\linewidth]{resources/bw.jpg}
+      \caption{Input}
+    \endminipage\hfill
+    \minipage{0.28\textwidth}
+      \includegraphics[width=\linewidth]{resources/gt.jpg}
+      \caption{Ground truth}
+    \endminipage\hfill
+    \minipage{0.28\textwidth}%
+      \includegraphics[width=\linewidth]{resources/colored.jpg}
+      \caption{Colourized}
+    \endminipage
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Introduction (II)}
+  Applications:
+    \begin{itemize}
+        \item Coloring historical images.
+        \item Preprocessing step in b/w image classification.
+    \end{itemize}
+\end{frame}
+
+% --- EXPERIMENTS --------------------------------------------------------------
 
 \begin{frame}{Training}
   \begin{center}
