@@ -8,9 +8,9 @@ import numpy as np
 
 from ..cielab import DEFAULT_CIELAB
 from ..util.image import images_in_directory, imread, rgb_to_lab
+from ..util.progress import display_progress
 from .io import read_classification, read_labels, read_lines
 from .plot import subplot_divider, subplots
-from .progress import display_progress
 
 
 def _raw_accuracy(ab_pred, ab_label, thresh, reweigh_classes=False):
@@ -89,7 +89,8 @@ def amt_demo(participants,
              predict_color_dir,
              rows=4,
              columns_best=3,
-             columns_worst=1):
+             columns_worst=1,
+             dirlabels=True):
 
     # parse results
     results = {}
@@ -146,12 +147,13 @@ def amt_demo(participants,
     for ax in axes[:, 2::3].flatten():
         ax.axis('off')
 
-    fmt = '{}' + 5 * '\\ ' + '{}'
+    if dirlabels:
+        fmt = '{}' + 5 * '\\ ' + '{}'
 
-    suptitle = fmt.format(r'Fooled more often $\longleftarrow$',
-                          r'$\longrightarrow$ Fooled less often')
+        suptitle = fmt.format(r'Fooled more often $\longleftarrow$',
+                              r'$\longrightarrow$ Fooled less often')
 
-    fig.suptitle(suptitle, y=-0.1)
+        fig.suptitle(suptitle, y=-0.1)
 
 
 def raw_accuracy_demo(ground_truth_dir,
