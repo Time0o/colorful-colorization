@@ -43,11 +43,22 @@ def is_rgb(img):
     return len(img.shape) == 3 and img.shape[2] == 3
 
 
+def is_gray(img):
+    return len(img.shape) == 2 or len(img.shape) == 3 and img.shape[2] == 1
+
+
 def to_rgb(img):
     if is_rgb(img):
         return img
     else:
         return np.dstack((img,) * 3)
+
+
+def to_gray(img):
+    if is_gray(img):
+        return img.reshape(*img.shape[:2], 1)
+    else:
+        return rgb_to_gray(img)
 
 
 def rgb_to_lab(img):

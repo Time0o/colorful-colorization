@@ -21,7 +21,7 @@ from colorization.modules.colorization_network import ColorizationNetwork
 from colorization.util.argparse import nice_help_formatter
 from colorization.util.image import images_in_directory, imread, imsave, \
                                     lab_to_rgb, resize, rgb_to_gray, \
-                                    rgb_to_lab, to_rgb, torch_to_numpy
+                                    rgb_to_lab, to_gray, to_rgb, torch_to_numpy
 
 
 USAGE = \
@@ -155,7 +155,7 @@ if __name__ == '__main__':
                                  "directory "))
 
     parser.add_argument('--method',
-                        choices=['zhang', 'iizuka'],
+                        choices=['zhang', 'larsson', 'iizuka'],
                         default='zhang',
                         help=str("only meaningful in conjunction with "
                                  "'predict_color'"))
@@ -198,7 +198,9 @@ if __name__ == '__main__':
     elif args.mode == 'random_color' and args.color_source_dir is None:
         err = "--color-source-dir must be specified if mode is 'random_color'"
         raise ValueError(err)
-    elif args.mode == 'predict_color' and args.model_checkpoint is None:
+    elif (args.mode == 'predict_color' and
+          args.method != 'larsson' and
+          args.model_checkpoint is None):
         err = "--model-checkpoint must be specified if mode is 'predict_color'"
         raise ValueError(err)
 
@@ -216,7 +218,18 @@ if __name__ == '__main__':
         input_dir = os.path.abspath(args.input_dir)
         output_dir = os.path.abspath(args.output_dir)
 
-        if args.mode == 'predict_color' and args.method == 'iizuka':
+        if args.mode == 'predict_color' and args.method == 'larsson':
+            import autocolorize
+
+            classifier = autocolorize.load_default_classifier()
+
+            def transform(in_path, out_path):
+                img = to_gray(imread(in_path))
+                img = img.astype(np.float64) / 255
+                img = autocolorize.colorize(img, classifier=classifier)
+                imsave(out_path, img)
+
+        elif args.mode == 'predict_color' and args.method == 'iizuka':
             os.chdir(os.path.dirname(args.model_checkpoint))
 
             def transform(in_path, out_path):
@@ -229,19 +242,19 @@ if __name__ == '__main__':
             h, w = args.resize_height, args.resize_width
 
             def transform(in_path, out_path):
-                img = to_rgb(imread(in_path))
+                img = imread(in_path)
                 imsave(out_path, resize(img, (h, w)))
 
         elif args.mode == 'no_color':
             def transform(in_path, out_path):
-                img = to_rgb(imread(in_path))
-                imsave(out_path, rgb_to_gray(img))
+                img = to_gray(imread(in_path))
+                imsave(out_path, img)
 
         elif args.mode == 'random_color':
             color_source_images = images_in_directory(args.color_source_dir)
 
             def transform(in_path, out_path):
-                img = to_rgb(imread(in_path))
+                img = to_gray(imread(in_path))
                 imsave(out_path, _random_color(img, color_source_images))
 
         for filename in images_in_directory(input_dir, exclude_root=True):
