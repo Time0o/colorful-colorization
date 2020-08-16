@@ -205,7 +205,7 @@ from colorization predict_color
 from skimage.io import imread
 
 img = imread('YOUR_IMAGE.jpg')
-img_colorized = predict_color(img)
+img_colorized = predict_color(model, img)
 ```
 
 ## References
