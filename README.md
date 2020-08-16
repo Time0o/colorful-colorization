@@ -178,7 +178,7 @@ network = ColorizationNetwork(annealed_mean_T=0.38, device='gpu')
 ```
 
 The parameters should be self explanatory (and are in this case optional), use
-`device='cpu'` if you plan to run the network on the GPU.
+`device='cpu'` if you plan to run the network on the CPU.
 
 You will then need to wrap the network in an instance of `ColorizationModel`
 which implements (among other things) checkpoint saving/loading:
