@@ -1,0 +1,3 @@
+[submodule "submodules/report"]
+	path = submodules/report
+	url = https://github.com/Time0o/pytorch-colorful-colorization-report.git
