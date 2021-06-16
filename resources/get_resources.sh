@@ -5,8 +5,7 @@ DIR=./resources
 get_file() {
     wget -q --show-progress "$1" -O "$2"
 }
-
-ZHANG_GITHUB_ROOT="https://github.com/richzhang/colorization/raw/caffe"
+ZHANG_GITHUB_ROOT="https://github.com/richzhang/colorization/tree/caffe/"
 ZHANG_BERKELEY_ROOT="eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files"
 
 # ab gamut
