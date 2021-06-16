@@ -12,6 +12,8 @@ get_file() {
     wget -q --show-progress "$1" -O "$2"
 }
 
+CTEST_GITHUB_ROOT="https://github.com/AruniRC/colorizer-fcn/raw/master"
+
 copy_images() {
     echo "copying images into $1..."
 
@@ -35,11 +37,11 @@ mkdir -p "$CVAL48K_DIR" "$CVAL10K_DIR" "$CVAL1K_DIR"
 cat "$imagenet_val_labels" | head -n 48000 > "$CVAL48K_DIR/$LABELFILE"
 
 get_file \
-"https://raw.githubusercontent.com/AruniRC/colorizer-fcn/master/lists/ctest10k.txt" \
+"$CTEST_GITHUB_ROOT/lists/ctest10k.txt" \
 "$CVAL10K_DIR/$LABELFILE"
 
 get_file \
-"https://raw.githubusercontent.com/AruniRC/colorizer-fcn/master/lists/cval1k.txt" \
+"$CTEST_GITHUB_ROOT/lists/cval1k.txt" \
 "$CVAL1K_DIR/$LABELFILE"
 
 for dir in "$CVAL48K_DIR" "$CVAL10K_DIR" "$CVAL1K_DIR"; do
